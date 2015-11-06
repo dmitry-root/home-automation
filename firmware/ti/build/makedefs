@@ -1,0 +1,97 @@
+# Configuration for TI-ARM based projects.
+
+.PHONY: build
+default: build
+
+BUILD_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+BOARD ?= TM4C1294NCPDT
+LINK_SCRIPT ?= $(BUILD_DIR)/$(BOARD).lds
+BUILD_TYPE ?= RELEASE
+CFG ?= $(wildcard *.cfg)
+
+INCLUDES := $(addprefix -I,$(INCLUDES))
+DEFINES := $(addprefix -D,$(DEFINES))
+
+WORK_DIR := $(realpath $(shell pwd))
+ROOT_DIR := $(abspath $(BUILD_DIR)/..)
+WORK_SUBDIR := $(subst $(ROOT_DIR)/,,$(WORK_DIR))
+OUTPUT_DIR := $(abspath $(ROOT_DIR)/../output/ti)
+OUTPUT := $(OUTPUT_DIR)/$(WORK_SUBDIR)
+
+# Function to get object file names from source file names
+objects=$(addprefix $(OUTPUT)/,$(subst .c,.o,$(subst .cpp,.o,$1)))
+
+OBJECTS := $(call objects,$(SOURCES))
+
+# Include settings file first, then settings.local (that may overwrite some settings).
+include $(wildcard $(BUILD_DIR)/settings $(BUILD_DIR)/settings.local)
+
+XDCPATH = $(TIRTOS_INSTALLATION_DIR);$(BIOS_INSTALLATION_DIR);$(NDK_INSTALLATION_DIR);$(UIA_INSTALLATION_DIR);
+COMMON_FLAGS := -I$(TIVAWARE_INSTALLATION_DIR) -I$(TIRTOS_INSTALLATION_DIR)/ti/drivers/wifi/cc3100/Simplelink -I$(TIRTOS_INSTALLATION_DIR)/ti/drivers/wifi/cc3100/Simplelink/Include -D PART_$(BOARD) -D gcc -D TIVAWARE -mcpu=cortex-m4 -march=armv7e-m -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -ffunction-sections -fdata-sections -g -gstrict-dwarf -Wall
+COMMON_FLAGS += $(INCLUDES)
+COMMON_FLAGS += $(DEFINES)
+DEBUG_FLAGS = -O0
+RELEASE_FLAGS = -Os
+
+ifeq ($(BUILD_TYPE),DEBUG)
+	BUILD_FLAGS := $(DEBUG_FLAGS) -D_DEBUG
+else
+	BUILD_FLAGS := $(RELEASE_FLAGS) -DNDEBUG
+endif
+
+CFLAGS := $(COMMON_FLAGS) $(BUILD_FLAGS)
+CXXFLAGS := $(COMMON_FLAGS) $(BUILD_FLAGS)
+
+LFLAGS := -L$(TIVAWARE_INSTALLATION_DIR)/grlib/gcc -L$(TIVAWARE_INSTALLATION_DIR)/usblib/gcc -L$(TIVAWARE_INSTALLATION_DIR)/driverlib/gcc -lgr -lusb -ldriver -march=armv7e-m -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -nostartfiles -static -Wl,--gc-sections -L$(BIOS_INSTALLATION_DIR)gnu/targets/arm/libs/install-native/arm-none-eabi/lib/armv7e-m/fpu -lgcc -lc -lm -lrdimon
+
+CC := "$(GCC_ROOT)/bin/arm-none-eabi-gcc"
+CXX := "$(GCC_ROOT)/bin/arm-none-eabi-g++"
+LNK := "$(GCC_ROOT)/bin/arm-none-eabi-gcc"
+
+export XDCPATH
+
+
+# The following is included only when the project configuration file exists.
+ifneq (x$(CFG),x)
+
+PROJECT := $(subst .cfg,,$(CFG))
+XDC_DIR := $(OUTPUT)/$(PROJECT)
+XDC_TARGET := $(XDC_DIR)/linker.cmd
+XDC_CFLAGS := $(CFLAGS)
+
+$(XDC_DIR)/compiler.opt: $(XDC_TARGET)
+
+$(OUTPUT):
+	mkdir -p $(OUTPUT)
+
+$(XDC_TARGET): $(CFG) $(OUTPUT)
+	$(XDCTOOLS_INSTALLATION_DIR)/xs xdc.tools.configuro -c "$(GCC_ROOT)" -t gnu.targets.arm.M4F -p ti.platforms.tiva:$(BOARD) --compileOptions "$(XDC_CFLAGS)" -o "$(XDC_DIR)" $(CFG)
+
+LFLAGS := -Wl,-T,$(LINK_SCRIPT) -Wl,-Map,$(OUTPUT)/$(PROJECT).map -Wl,-T,$(XDC_TARGET) $(LFLAGS)
+TARGET := $(OUTPUT)/$(PROJECT).out
+
+CFLAGS += "@$(XDC_DIR)/compiler.opt"
+CXXFLAGS += "@$(XDC_DIR)/compiler.opt"
+
+.PHONY: clean
+clean:
+	rm -rf $(OUTPUT)
+
+endif
+
+
+# Common rules for building object files from sources
+
+$(OUTPUT)/%.o: %.c $(XDC_DIR)/compiler.opt
+	@ mkdir -p `dirname $@`
+	$(CC) $(CFLAGS) $< -c -o $@
+
+$(OUTPUT)/%.o: %.cpp $(XDC_DIR)/compiler.opt
+	@ mkdir -p `dirname $@`
+	$(CXX) $(CXXFLAGS) $< -c -o $@
+
+$(TARGET): $(OBJECTS) $(XDC_TARGET)
+	$(LNK) $(OBJECTS) $(LFLAGS) -o $@
+
+build: $(TARGET)
+

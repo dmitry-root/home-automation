@@ -1,0 +1,16 @@
+# This file contains make initial configuration for TI-based firmware.
+# Please copy it to settings.local in order to build the project properly.
+
+# arm-none-eabi-gcc compiler installation directory.
+GCC_ROOT := /usr
+
+# TIRTOS installation directory
+TIRTOS_ROOT := $(HOME)/projects/ti
+
+# Versions of TIRTOS used for build
+XDCTOOLS_INSTALLATION_DIR = $(TIRTOS_ROOT)/xdctools_3_31_01_33_core
+TIRTOS_INSTALLATION_DIR   = $(TIRTOS_ROOT)/tirtos_tivac_2_14_00_10/packages
+BIOS_INSTALLATION_DIR     = $(TIRTOS_ROOT)/tirtos_tivac_2_14_00_10/products/bios_6_42_01_20/packages
+NDK_INSTALLATION_DIR      = $(TIRTOS_ROOT)/tirtos_tivac_2_14_00_10/products/ndk_2_24_03_35/packages
+UIA_INSTALLATION_DIR      = $(TIRTOS_ROOT)/tirtos_tivac_2_14_00_10/products/uia_2_00_02_39/packages
+TIVAWARE_INSTALLATION_DIR = $(TIRTOS_ROOT)/tirtos_tivac_2_14_00_10/products/TivaWare_C_Series-2.1.1.71b
