@@ -8,10 +8,10 @@ export BUILD_TYPE
 
 .PHONY: debug release all clean $(SUBDIRS)
 
+default: all
+
 debug:
 release:
-
-default: all
 
 all: output $(SUBDIRS)
 
