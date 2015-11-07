@@ -1,6 +1,6 @@
 # Common build root for all firmware.
 
-SPECIAL_DIRS := build output $(wildcard .*)
+SPECIAL_DIRS := build include $(wildcard .*)
 SUBDIRS := $(filter-out $(SPECIAL_DIRS),$(subst /,,$(wildcard */)))
 BUILD_TYPE := $(if $(findstring debug,$(MAKECMDGOALS)),DEBUG,RELEASE)
 
