@@ -31,5 +31,5 @@
 *.kdev4
 
 # Some more files
-firmware/ti/build/*.local
-firmware/output
+/firmware/ti/build/*.local
+/output

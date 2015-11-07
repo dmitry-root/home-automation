@@ -16,10 +16,10 @@ release:
 all: output $(SUBDIRS)
 
 output:
-	mkdir -p ../output/ti
+	mkdir -p ../../output/firmware/ti
 
 clean:
-	rm -rf ../output/ti
+	rm -rf ../../output/firmware/ti
 
 $(SUBDIRS):
 	$(MAKE) -C $@ build
