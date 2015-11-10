@@ -102,40 +102,29 @@ namespace onewire
 	}
 
 
-	bool Session::read_rom(UniqueId& rom)
+	void Session::read_rom(UniqueId& rom)
 	{
-		if (!reset())
-			return false;
-
 		write(READ_ROM);
-		rom.lo() = read(32);
-		rom.hi() = read(32);
-		return true;
+		const uint64_t lo = read(32);
+		const uint64_t hi = read(32);
+		rom = (hi << 32) | lo;
 	}
 
-	bool Session::match_rom(const UniqueId& rom)
+	void Session::match_rom(const UniqueId& rom)
 	{
-		if (!reset())
-			return false;
-
 		write(MATCH_ROM);
-		write(rom.lo(), 32);
-		write(rom.hi(), 32);
-		return true;
+		write(rom & ~0u, 32);
+		write(rom >> 32, 32);
 	}
 
-	bool Session::skip_rom()
+	void Session::skip_rom()
 	{
-		if (!reset())
-			return false;
-
 		write(SKIP_ROM);
-		return true;
 	}
 
 	bool Session::search_rom(SearchContext& context)
 	{
-		if (context.done() || !reset())
+		if (context.done())
 			return false;
 
 		write(context.type_ == SearchContext::Type_Alarm ? ALARM_SEARCH : SEARCH_ROM);
