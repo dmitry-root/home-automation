@@ -6,7 +6,7 @@
 #include "NonCopyable.h"
 
 
-namespace utils
+namespace util
 {
 
 	class Timer : NonCopyable
@@ -19,7 +19,7 @@ namespace utils
 
 		static bool is_used(unsigned int index)
 		{
-			return ti_sysbios_hal_Timer_getStatus() == ti_sysbios_interfaces_ITimer_Status_INUSE;
+			return ti_sysbios_hal_Timer_getStatus(index) == ti_sysbios_interfaces_ITimer_Status_INUSE;
 		}
 
 		static void startup()
@@ -34,14 +34,12 @@ namespace utils
 		Timer(ti_sysbios_hal_Timer_Handle timer_handle) :
 			timer_handle_(timer_handle) {}
 
-		uint32_t max_ticks() const { return ti_sysbios_hal_Timer_getMaxTicks(timer_handle_); }
-		void set_next_tick(uint32_t ticks) { ti_sysbios_hal_Timer_setNextTick(timer_handle_, ticks); }
 		void start() { ti_sysbios_hal_Timer_start(timer_handle_); }
 		void stop() { ti_sysbios_hal_Timer_stop(timer_handle_); }
 		void set_period(uint32_t period) { ti_sysbios_hal_Timer_setPeriod(timer_handle_, period); }
 		void set_period_mks(uint32_t period_mks) { ti_sysbios_hal_Timer_setPeriodMicroSecs(timer_handle_, period_mks); }
 		uint32_t period() const { return ti_sysbios_hal_Timer_getPeriod(timer_handle_); }
-		uint32_t counter() const { return ti_sysbios_hal_Timer_getCount(timer_handle_); }
+		uint32_t ticks() const { return ti_sysbios_hal_Timer_getCount(timer_handle_); }
 		void set_callback(Callback cb, unsigned int arg) { ti_sysbios_hal_Timer_setFunc(timer_handle_, cb, arg); }
 		void trigger(uint32_t cycles) { ti_sysbios_hal_Timer_trigger(timer_handle_, cycles); }
 		uint32_t expired_counts() const { return ti_sysbios_hal_Timer_getExpiredCounts(timer_handle_); }
@@ -60,9 +58,37 @@ namespace utils
 	class TimerParams : NonCopyable
 	{
 	public:
+		enum RunMode
+		{
+			RunMode_Continuous = ti_sysbios_interfaces_ITimer_RunMode_CONTINUOUS,
+			RunMode_OneShot = ti_sysbios_interfaces_ITimer_RunMode_ONESHOT,
+			RunMode_Dynamic = ti_sysbios_interfaces_ITimer_RunMode_DYNAMIC
+		};
+
+		enum StartMode
+		{
+			StartMode_Auto = ti_sysbios_interfaces_ITimer_StartMode_AUTO,
+			StartMode_User = ti_sysbios_interfaces_ITimer_StartMode_USER
+		};
+
+		enum PeriodType
+		{
+			PeriodType_Counts = ti_sysbios_interfaces_ITimer_PeriodType_COUNTS,
+			PeriodType_Microseconds = ti_sysbios_interfaces_ITimer_PeriodType_MICROSECS
+		};
+
 		TimerParams()
 		{
 			ti_sysbios_hal_Timer_Params_init(&timer_params_);
+		}
+
+		TimerParams(RunMode run_mode, StartMode start_mode, PeriodType period_type, uint32_t period)
+		{
+			ti_sysbios_hal_Timer_Params_init(&timer_params_);
+			timer_params_.runMode = static_cast<ti_sysbios_interfaces_ITimer_RunMode>(run_mode);
+			timer_params_.startMode = static_cast<ti_sysbios_interfaces_ITimer_StartMode>(start_mode);
+			timer_params_.periodType = static_cast<ti_sysbios_interfaces_ITimer_PeriodType>(period_type);
+			timer_params_.period = period;
 		}
 
 		ti_sysbios_hal_Timer_Params& data() { return timer_params_; }
@@ -98,10 +124,10 @@ namespace utils
 	public:
 		using Timer::Callback;
 
-		StaticTimer(int id, Callback cb, const TimerParams& params, xdc_runtime_Error_Block& eb) :
+		StaticTimer(int id, Callback cb, const TimerParams& params, xdc_runtime_Error_Block* eb = 0) :
 			Timer(0)
 		{
-			ti_sysbios_hal_Timer_construct(&timer_data_, id, cb, &params.data(), &eb);
+			ti_sysbios_hal_Timer_construct(&timer_data_, id, cb, &params.data(), eb);
 			handle() = ti_sysbios_hal_Timer_handle(&timer_data_);
 		}
 
@@ -120,14 +146,14 @@ namespace utils
 	public:
 		using Timer::Callback;
 
-		DynamicTimer(int id, Callback cb, const TimerParams& params, xdc_runtime_Error_Block& eb) :
-			Timer( ti_sysbios_hal_Timer_create(id, cb, &params.data(), &eb) )
+		DynamicTimer(int id, Callback cb, const TimerParams& params, xdc_runtime_Error_Block* eb = 0) :
+			Timer( ti_sysbios_hal_Timer_create(id, cb, &params.data(), eb) )
 		{
 		}
 
 		~DynamicTimer()
 		{
-			ti_sysbios_hal_Timer_delete( handle() );
+			ti_sysbios_hal_Timer_delete( &handle() );
 		}
 	};
 

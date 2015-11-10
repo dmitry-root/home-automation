@@ -1,6 +1,6 @@
 #pragma once
 
-namespace utils
+namespace util
 {
 
 	class NonCopyable
@@ -11,7 +11,7 @@ namespace utils
 
 	private:
 		NonCopyable(const NonCopyable&) {}
-		NonCopyable& operator= (const NonCopyable&) {}
+		NonCopyable& operator= (const NonCopyable&) {return *this;}
 	};
 
 }

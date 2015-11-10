@@ -22,14 +22,16 @@ INCLUDES += "-I$(ROOT_DIR)/include" "-I$(WORK_DIR)"
 
 # Function to get object file names from source file names
 objects=$(addprefix $(OUTPUT)/,$(subst .c,.o,$(subst .cpp,.o,$1)))
+depfiles=$(addprefix $(OUTPUT)/,$(subst .c,.d,$(subst .cpp,.d,$1)))
 
 OBJECTS := $(call objects,$(SOURCES))
+DEPFILES := $(call depfiles,$(SOURCES))
 
 # Include settings file first, then settings.local (that may overwrite some settings).
 include $(wildcard $(BUILD_DIR)/settings $(BUILD_DIR)/settings.local)
 
 XDCPATH = $(TIRTOS_INSTALLATION_DIR);$(BIOS_INSTALLATION_DIR);$(NDK_INSTALLATION_DIR);$(UIA_INSTALLATION_DIR);
-COMMON_FLAGS := -I$(TIVAWARE_INSTALLATION_DIR) -D PART_$(BOARD) -D gcc -D TIVAWARE -mcpu=cortex-m4 -march=armv7e-m -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -ffunction-sections -fdata-sections -g -gstrict-dwarf -Wall
+COMMON_FLAGS := -I$(TIVAWARE_INSTALLATION_DIR) -D PART_$(BOARD) -D gcc -D TIVAWARE -mcpu=cortex-m4 -march=armv7e-m -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -mabi=aapcs -ffunction-sections -fdata-sections -g -gstrict-dwarf -Wall
 COMMON_FLAGS += $(INCLUDES)
 COMMON_FLAGS += $(DEFINES)
 DEBUG_FLAGS = -O0
@@ -49,6 +51,7 @@ LFLAGS := -L$(TIVAWARE_INSTALLATION_DIR)/grlib/gcc -L$(TIVAWARE_INSTALLATION_DIR
 CC := "$(GCC_ROOT)/bin/arm-none-eabi-gcc"
 CXX := "$(GCC_ROOT)/bin/arm-none-eabi-g++"
 LNK := "$(GCC_ROOT)/bin/arm-none-eabi-gcc"
+AR := "$(GCC_ROOT)/bin/arm-none-eabi-ar"
 
 export XDCPATH
 
@@ -63,9 +66,6 @@ XDC_CFLAGS := $(CFLAGS)
 
 $(XDC_DIR)/compiler.opt: $(XDC_TARGET)
 
-$(OUTPUT):
-	mkdir -p $(OUTPUT)
-
 $(XDC_TARGET): $(CFG) $(OUTPUT)
 	$(XDCTOOLS_INSTALLATION_DIR)/xs xdc.tools.configuro -c "$(GCC_ROOT)" -t gnu.targets.arm.M4F -p ti.platforms.tiva:$(BOARD) --compileOptions "$(XDC_CFLAGS)" -o "$(XDC_DIR)" $(CFG)
 
@@ -75,25 +75,67 @@ TARGET := $(OUTPUT)/$(PROJECT).out
 CFLAGS += "@$(XDC_DIR)/compiler.opt"
 CXXFLAGS += "@$(XDC_DIR)/compiler.opt"
 
-.PHONY: clean
-clean:
-	rm -rf $(OUTPUT)
+else
+
+PROJECT := $(notdir $(WORK_DIR))
+TARGET := $(OUTPUT)/lib$(PROJECT).a
+
+ADD_FLAGS := \
+	-I"$(TIRTOS_INSTALLATION_DIR)" \
+	-I"$(BIOS_INSTALLATION_DIR)" \
+	-I"$(NDK_INSTALLATION_DIR)" \
+	-I"$(UIA_INSTALLATION_DIR)" \
+	-I"$(XDCTOOLS_INSTALLATION_DIR)/packages" \
+	-Dxdc_target_types__="gnu/targets/arm/std.h" \
+	-Dxdc_target_name__=M4F
+
+CFLAGS += $(ADD_FLAGS)
+CXXFLAGS += $(ADD_FLAGS)
 
 endif
 
 
 # Common rules for building object files from sources
 
-$(OUTPUT)/%.o: %.c $(XDC_DIR)/compiler.opt
+$(OUTPUT):
+	mkdir -p $(OUTPUT)
+
+.PHONY: clean
+clean:
+	rm -rf $(OUTPUT)
+
+$(OUTPUT)/%.d: %.c
+	@ mkdir -p `dirname $@`
+	$(CC) $(CFLAGS) -MM -MP -MT $(<:%.c=$(OUTPUT)/%.o) -MF $@ $<
+	echo "$(<:%.c=$(OUTPUT)/%.o): Makefile" >> $@
+
+$(OUTPUT)/%.d: %.cpp
+	@ mkdir -p `dirname $@`
+	$(CXX) $(CXXFLAGS) -MM -MP -MT $(<:%.cpp=$(OUTPUT)/%.o) -MF $@ $<
+	echo "$(<:%.cpp=$(OUTPUT)/%.o): Makefile" >> $@
+
+$(OUTPUT)/%.o: %.c
 	@ mkdir -p `dirname $@`
 	$(CC) $(CFLAGS) $< -c -o $@
 
-$(OUTPUT)/%.o: %.cpp $(XDC_DIR)/compiler.opt
+$(OUTPUT)/%.o: %.cpp
 	@ mkdir -p `dirname $@`
 	$(CXX) $(CXXFLAGS) $< -c -o $@
+
+ifneq (x$(CFG),x)
 
 $(TARGET): $(OBJECTS) $(XDC_TARGET)
 	$(LNK) $(OBJECTS) $(LFLAGS) -o $@
 
+$(OBJECTS): $(XDC_DIR)/compiler.opt
+
+else
+
+$(TARGET): $(OBJECTS)
+	$(AR) cru $@ $(OBJECTS)
+
+endif
+
 build: $(TARGET)
 
+-include $(DEPFILES)
