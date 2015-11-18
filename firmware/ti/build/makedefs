@@ -44,7 +44,7 @@ else
 endif
 
 CFLAGS := $(COMMON_FLAGS) $(BUILD_FLAGS)
-CXXFLAGS := $(COMMON_FLAGS) $(BUILD_FLAGS)
+CXXFLAGS := $(COMMON_FLAGS) $(BUILD_FLAGS) -fno-exceptions -fno-rtti
 
 LFLAGS := -L$(TIVAWARE_INSTALLATION_DIR)/grlib/gcc -L$(TIVAWARE_INSTALLATION_DIR)/usblib/gcc -L$(TIVAWARE_INSTALLATION_DIR)/driverlib/gcc -lgr -lusb -ldriver -march=armv7e-m -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -nostartfiles -static -Wl,--gc-sections -L$(BIOS_INSTALLATION_DIR)gnu/targets/arm/libs/install-native/arm-none-eabi/lib/armv7e-m/fpu -lgcc -lc -lm -lrdimon
 
@@ -52,6 +52,7 @@ CC := "$(GCC_ROOT)/bin/arm-none-eabi-gcc"
 CXX := "$(GCC_ROOT)/bin/arm-none-eabi-g++"
 LNK := "$(GCC_ROOT)/bin/arm-none-eabi-gcc"
 AR := "$(GCC_ROOT)/bin/arm-none-eabi-ar"
+OBJCOPY := "$(GCC_ROOT)/bin/arm-none-eabi-objcopy"
 
 export XDCPATH
 
@@ -70,7 +71,8 @@ $(XDC_TARGET): $(CFG) $(OUTPUT)
 	$(XDCTOOLS_INSTALLATION_DIR)/xs xdc.tools.configuro -c "$(GCC_ROOT)" -t gnu.targets.arm.M4F -p ti.platforms.tiva:$(BOARD) --compileOptions "$(XDC_CFLAGS)" -o "$(XDC_DIR)" $(CFG)
 
 LFLAGS := -Wl,-T,$(LINK_SCRIPT) -Wl,-Map,$(OUTPUT)/$(PROJECT).map -Wl,-T,$(XDC_TARGET) $(LFLAGS)
-TARGET := $(OUTPUT)/$(PROJECT).out
+EXE := $(OUTPUT)/$(PROJECT).out
+TARGET := $(OUTPUT)/$(PROJECT).bin
 
 CFLAGS += "@$(XDC_DIR)/compiler.opt"
 CXXFLAGS += "@$(XDC_DIR)/compiler.opt"
@@ -124,8 +126,11 @@ $(OUTPUT)/%.o: %.cpp
 
 ifneq (x$(CFG),x)
 
-$(TARGET): $(OBJECTS) $(XDC_TARGET)
+$(EXE): $(OBJECTS) $(XDC_TARGET)
 	$(LNK) $(OBJECTS) $(LFLAGS) -o $@
+
+$(TARGET): $(EXE)
+	$(OBJCOPY) -O binary -R .vtable $< $@
 
 $(OBJECTS): $(XDC_DIR)/compiler.opt
 
