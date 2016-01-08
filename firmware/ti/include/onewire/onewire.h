@@ -2,6 +2,7 @@
 
 #include "util/NonCopyable.h"
 #include "util/Timer.h"
+#include "util/Semaphore.h"
 #include "util/Pin.h"
 
 
@@ -18,9 +19,12 @@ namespace onewire
 	public:
 		Master(const util::Pin& input_pin, const util::Pin& output_pin, int timer_index = util::Timer::ANY);
 
+		void sleep(unsigned int mks);
+
 	private:
 		util::Pin input_pin_;
 		util::Pin output_pin_;
+		util::StaticSemaphore semaphore_;
 		util::StaticTimer timer_;
 	};
 
@@ -80,13 +84,11 @@ namespace onewire
 		bool search_rom(SearchContext& context);
 
 	private:
-		void start_timing();
 		void wait(uint32_t mks);
 		void low(uint32_t mks);
 
 	private:
 		Master& master_;
-		uint32_t time_;
 	};
 
 	class Temperature

@@ -8,6 +8,7 @@ BOARD ?= TM4C1294NCPDT
 LINK_SCRIPT ?= $(BUILD_DIR)/$(BOARD).lds
 BUILD_TYPE ?= RELEASE
 CFG ?= $(wildcard *.cfg)
+ADD_LIBS ?=
 
 INCLUDES := $(addprefix -I,$(INCLUDES))
 DEFINES := $(addprefix -D,$(DEFINES))
@@ -26,6 +27,7 @@ depfiles=$(addprefix $(OUTPUT)/,$(subst .c,.d,$(subst .cpp,.d,$1)))
 
 OBJECTS := $(call objects,$(SOURCES))
 DEPFILES := $(call depfiles,$(SOURCES))
+LIBPATHS := $(addprefix $(OUTPUT_DIR)/,$(ADD_LIBS))
 
 # Include settings file first, then settings.local (that may overwrite some settings).
 include $(wildcard $(BUILD_DIR)/settings $(BUILD_DIR)/settings.local)
@@ -34,6 +36,7 @@ XDCPATH = $(TIRTOS_INSTALLATION_DIR);$(BIOS_INSTALLATION_DIR);$(NDK_INSTALLATION
 COMMON_FLAGS := -I$(TIVAWARE_INSTALLATION_DIR) -D PART_$(BOARD) -D gcc -D TIVAWARE -mcpu=cortex-m4 -march=armv7e-m -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -mabi=aapcs -ffunction-sections -fdata-sections -g -gstrict-dwarf -Wall
 COMMON_FLAGS += $(INCLUDES)
 COMMON_FLAGS += $(DEFINES)
+COMMON_FLAGS += -I"$(NDK_INSTALLATION_DIR)/ti/ndk/inc/bsd" -D_POSIX_SOURCE
 DEBUG_FLAGS = -O0
 RELEASE_FLAGS = -Os
 
@@ -46,7 +49,7 @@ endif
 CFLAGS := $(COMMON_FLAGS) $(BUILD_FLAGS)
 CXXFLAGS := $(COMMON_FLAGS) $(BUILD_FLAGS) -fno-exceptions -fno-rtti
 
-LFLAGS := -L$(TIVAWARE_INSTALLATION_DIR)/grlib/gcc -L$(TIVAWARE_INSTALLATION_DIR)/usblib/gcc -L$(TIVAWARE_INSTALLATION_DIR)/driverlib/gcc -lgr -lusb -ldriver -march=armv7e-m -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -nostartfiles -static -Wl,--gc-sections -L$(BIOS_INSTALLATION_DIR)gnu/targets/arm/libs/install-native/arm-none-eabi/lib/armv7e-m/fpu -lgcc -lc -lm -lrdimon
+LFLAGS := -L$(TIVAWARE_INSTALLATION_DIR)/grlib/gcc -L$(TIVAWARE_INSTALLATION_DIR)/usblib/gcc -L$(TIVAWARE_INSTALLATION_DIR)/driverlib/gcc -lgr -lusb -ldriver -march=armv7e-m -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -nostartfiles -static -Wl,--gc-sections -L$(BIOS_INSTALLATION_DIR)gnu/targets/arm/libs/install-native/arm-none-eabi/lib/armv7e-m/fpu -lgcc -lc -lm -lnosys
 
 CC := "$(GCC_ROOT)/bin/arm-none-eabi-gcc"
 CXX := "$(GCC_ROOT)/bin/arm-none-eabi-g++"
@@ -126,8 +129,8 @@ $(OUTPUT)/%.o: %.cpp
 
 ifneq (x$(CFG),x)
 
-$(EXE): $(OBJECTS) $(XDC_TARGET)
-	$(LNK) $(OBJECTS) $(LFLAGS) -o $@
+$(EXE): $(OBJECTS) $(LIBPATHS) $(XDC_TARGET)
+	$(LNK) $(OBJECTS) $(LIBPATHS) $(LFLAGS) -o $@
 
 $(TARGET): $(EXE)
 	$(OBJCOPY) -O binary -R .vtable $< $@

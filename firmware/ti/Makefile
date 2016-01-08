@@ -23,3 +23,5 @@ clean:
 
 $(SUBDIRS):
 	$(MAKE) -C $@ build
+
+heater: onewire

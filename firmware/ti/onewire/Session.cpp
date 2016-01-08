@@ -16,26 +16,22 @@ namespace onewire
 
 
 	Session::Session(Master& master) :
-		master_(master),
-		time_(0)
+		master_(master)
 	{
-		master_.timer_.start();
 	}
 
 	Session::~Session()
 	{
-		master_.timer_.stop();
 	}
 
 	bool Session::reset()
 	{
 		util::HwiLock hwi_lock;
-		start_timing();
 
 		low(500);
 		wait(70);
 
-		const bool result = master_.input_pin_;
+		const bool result = !master_.input_pin_;
 
 		wait(500);
 		return result;
@@ -44,7 +40,6 @@ namespace onewire
 	uint32_t Session::read(unsigned int bits)
 	{
 		util::HwiLock hwi_lock;
-		start_timing();
 
 		uint32_t result = 0;
 
@@ -63,7 +58,6 @@ namespace onewire
 	void Session::write(uint32_t value, unsigned int bits)
 	{
 		util::HwiLock hwi_lock;
-		start_timing();
 
 		for (unsigned int bit = 0; bit < bits; bit++)
 		{
@@ -82,16 +76,9 @@ namespace onewire
 		}
 	}
 
-	void Session::start_timing()
-	{
-		time_ = master_.timer_.ticks() + 1;
-	}
-
 	void Session::wait(uint32_t mks)
 	{
-		time_ += mks;
-		while (master_.timer_.ticks() < time_)
-			;
+		master_.sleep(mks);
 	}
 
 	void Session::low(uint32_t mks)

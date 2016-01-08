@@ -24,9 +24,27 @@ SOFTWARE.
 
 ******************************************************************************/
 
+#include <xdc/std.h>
+#include <xdc/cfg/global.h>
+#include <xdc/runtime/Error.h>
+#include <xdc/runtime/System.h>
+
+#include <ti/sysbios/BIOS.h>
+#include <ti/sysbios/knl/Task.h>
+#include <ti/drivers/GPIO.h>
+
+#include "board.h"
+
 
 extern "C"
 int main()
 {
+    /* Call board init functions */
+    Board_initGeneral();
+    Board_initGPIO();
+    Board_initEMAC();
+
+    BIOS_start();
+
 	return 0;
 }

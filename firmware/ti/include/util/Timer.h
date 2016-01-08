@@ -101,7 +101,10 @@ namespace util
 		void set_start_auto() { timer_params_.startMode = ti_sysbios_interfaces_ITimer_StartMode_AUTO; }
 		void set_start_user() { timer_params_.startMode = ti_sysbios_interfaces_ITimer_StartMode_USER; }
 
-		void set_cb_arg(unsigned int arg) { timer_params_.arg = arg; }
+		TimerParams& set_cb_arg(unsigned int arg) { timer_params_.arg = arg; return *this; }
+
+		template <typename T>
+		TimerParams& set_cb_arg(T* arg) { timer_params_.arg = reinterpret_cast<unsigned int>(arg); return *this; }
 
 		void set_period_count(uint32_t period)
 		{
