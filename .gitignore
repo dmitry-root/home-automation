@@ -30,6 +30,11 @@
 # KDevelop4 project files
 *.kdev4
 
+# Eagle temporary files
+*.[bsl]#[0-9]
+
 # Some more files
 /firmware/ti/build/*.local
 /output
+/schematics/gerber
+/schematics/zip
