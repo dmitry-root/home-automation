@@ -1,0 +1,97 @@
+# Configuration for STM8 based projects.
+
+.PHONY: build
+default: build
+
+BUILD_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+BUILD_TYPE ?= RELEASE
+ADD_LIBS ?=
+
+INCLUDES := $(addprefix -I,$(INCLUDES))
+DEFINES := $(addprefix -D,$(DEFINES))
+
+WORK_DIR := $(realpath $(shell pwd))
+ROOT_DIR := $(abspath $(BUILD_DIR)/..)
+WORK_SUBDIR := $(subst $(ROOT_DIR)/,,$(WORK_DIR))
+OUTPUT_DIR := $(abspath $(ROOT_DIR)/../../output/firmware/stm8)
+OUTPUT := $(OUTPUT_DIR)/$(WORK_SUBDIR)
+
+PROJECT ?= $(notdir $(WORK_DIR))
+TYPE ?= exe
+
+INCLUDES += "-I$(ROOT_DIR)/include" "-I$(WORK_DIR)"
+
+# Function to get object file names from source file names
+objects=$(addprefix $(OUTPUT)/,$(subst .c,.rel,$1))
+depfiles=$(addprefix $(OUTPUT)/,$(subst .c,.d,$1))
+
+OBJECTS := $(call objects,$(SOURCES))
+DEPFILES := $(call depfiles,$(SOURCES))
+LIBPATHS := $(addprefix $(OUTPUT_DIR)/,$(ADD_LIBS))
+
+INCLUDES += -I$(ROOT_DIR)/libstm8s/include
+DEFINES += -DSTM8S208
+COMMON_FLAGS := -mstm8 --std-sdcc99
+COMMON_FLAGS += $(INCLUDES)
+COMMON_FLAGS += $(DEFINES)
+
+ifeq ($(BUILD_TYPE),DEBUG)
+	BUILD_FLAGS := $(DEBUG_FLAGS) -D_DEBUG
+else
+	BUILD_FLAGS := $(RELEASE_FLAGS) -DNDEBUG
+endif
+
+CFLAGS := $(COMMON_FLAGS) $(BUILD_FLAGS)
+
+LFLAGS := -mstm8 --std-sdcc99 -lstm8 --out-fmt-ihx
+
+CC := sdcc
+CPP := sdcpp
+LNK := sdcc
+AR := sdar
+
+
+ifeq ($(TYPE),exe)
+
+TARGET := $(OUTPUT)/$(PROJECT).ihx
+
+else
+
+TARGET := $(OUTPUT_DIR)/$(PROJECT).lib
+
+endif
+
+
+# Common rules for building object files from sources
+
+$(OUTPUT):
+	mkdir -p $(OUTPUT)
+
+.PHONY: clean
+clean:
+	rm -rf $(OUTPUT)
+
+$(OUTPUT)/%.d: %.c
+	@ mkdir -p `dirname $@`
+	$(CPP) $(INCLUDES) $(DEFINES) -D__SDCC -M $< > $@
+	echo "$(<:%.c=$(OUTPUT)/%.rel): Makefile" >> $@
+
+$(OUTPUT)/%.rel: %.c
+	@ mkdir -p `dirname $@`
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+ifeq ($(TYPE),exe)
+
+$(TARGET): $(OBJECTS) $(LIBPATHS)
+	$(LNK) $(LFLAGS) -o $@ $(OBJECTS) $(LIBPATHS)
+
+else
+
+$(TARGET): $(OBJECTS)
+	$(AR) -cru $@ $(OBJECTS)
+
+endif
+
+build: $(TARGET)
+
+-include $(DEPFILES)
