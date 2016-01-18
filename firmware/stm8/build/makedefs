@@ -12,6 +12,7 @@ DEFINES := $(addprefix -D,$(DEFINES))
 
 WORK_DIR := $(realpath $(shell pwd))
 ROOT_DIR := $(abspath $(BUILD_DIR)/..)
+SHARED_DIR := $(abspath $(ROOT_DIR)/../shared)
 WORK_SUBDIR := $(subst $(ROOT_DIR)/,,$(WORK_DIR))
 OUTPUT_DIR := $(abspath $(ROOT_DIR)/../../output/firmware/stm8)
 OUTPUT := $(OUTPUT_DIR)/$(WORK_SUBDIR)
@@ -19,7 +20,7 @@ OUTPUT := $(OUTPUT_DIR)/$(WORK_SUBDIR)
 PROJECT ?= $(notdir $(WORK_DIR))
 TYPE ?= exe
 
-INCLUDES += "-I$(ROOT_DIR)/include" "-I$(WORK_DIR)"
+INCLUDES += "-I$(ROOT_DIR)/include" "-I$(WORK_DIR)" "-I$(SHARED_DIR)/include"
 
 # Function to get object file names from source file names
 objects=$(addprefix $(OUTPUT)/,$(subst .c,.rel,$1))
