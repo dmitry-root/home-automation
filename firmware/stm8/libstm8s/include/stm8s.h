@@ -29,6 +29,10 @@
 #ifndef __STM8S_H
 #define __STM8S_H
 
+#if defined(__SDCC)
+#include <stdint.h>
+#endif
+
 /** @addtogroup STM8S_StdPeriph_Driver
   * @{
   */
@@ -216,6 +220,7 @@
 #define     __O     volatile         /*!< defines 'write only' permissions    */
 #define     __IO    volatile         /*!< defines 'read / write' permissions  */
 
+#ifndef _SDCC_
 /*!< Signed integer types  */
 typedef   signed char     int8_t;
 typedef   signed short    int16_t;
@@ -235,7 +240,7 @@ typedef int8_t  s8;
 typedef uint32_t  u32;
 typedef uint16_t u16;
 typedef uint8_t  u8;
-
+#endif /* _SDCC_ */
 
 typedef enum {FALSE = 0, TRUE = !FALSE} bool;
 

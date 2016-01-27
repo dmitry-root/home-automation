@@ -25,3 +25,4 @@ $(SUBDIRS):
 	$(MAKE) -C $@ build
 
 test : libstm8s
+can_node : libstm8s
