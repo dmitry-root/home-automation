@@ -16,8 +16,9 @@ typedef struct Led_s
 {
 	GPIO_TypeDef* gpio;
 	GPIO_Pin_TypeDef pin;
-	LedMode mode;
-	uint8_t on_time, off_time, counter;
+	volatile LedMode mode;
+	uint8_t on_time, off_time;
+	volatile uint8_t counter;
 } Led;
 
 static Led leds[CAN_Node_LedCount] = {

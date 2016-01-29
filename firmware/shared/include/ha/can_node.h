@@ -51,10 +51,13 @@ uint16_t HA_CAN_Node_field_address(uint8_t channel_id, uint8_t field)
 /** Channel functions */
 enum HA_CAN_Node_Function
 {
+	HA_CAN_Node_Function_None,              /*!< No function, default */
 	HA_CAN_Node_Function_Switch,            /*!< Digital switch, i.e. GPIO output */
 	HA_CAN_Node_Function_Button,            /*!< Digital button, i.e. GPIO input (with locking and interrupt signalling) */
 	HA_CAN_Node_Function_Analog,            /*!< ADC sensor */
-	HA_CAN_Node_Function_PWM                /*!< PWM output */
+	HA_CAN_Node_Function_PWM,               /*!< PWM output */
+
+	HA_CAN_Node_FunctionCount
 };
 
 
