@@ -8,13 +8,11 @@
 #include <stddef.h>
 
 
-enum { ChannelCount = 4 };
-
 static CAN_Node_Module* sysinfo_module = NULL;
 static CAN_Node_Module* proto_module = NULL;
 static CAN_Node_Module* function_modules[HA_CAN_Node_FunctionCount] = { NULL };
-static CAN_Node_Module* channel_modules[ChannelCount] = { NULL };
-static uint8_t          module_ids[ChannelCount] = { 0 };
+static CAN_Node_Module* channel_modules[CAN_Node_ChannelCount] = { NULL };
+static uint8_t          module_ids[CAN_Node_ChannelCount] = { 0 };
 
 
 void CAN_Node_register_sysinfo_module(CAN_Node_Module* module)
@@ -39,7 +37,7 @@ void CAN_Node_register_function_module(uint8_t function_id, CAN_Node_Module* mod
 
 void CAN_Node_set_channel(uint8_t channel_id, uint8_t function_id)
 {
-	assert_param(channel_id < ChannelCount);
+	assert_param(channel_id < CAN_Node_ChannelCount);
 	assert_param(function_id < HA_CAN_Node_FunctionCount);
 
 	if (channel_modules[channel_id] != NULL)
@@ -57,7 +55,7 @@ void CAN_Node_set_channel(uint8_t channel_id, uint8_t function_id)
 
 uint8_t CAN_Node_get_channel(uint8_t channel_id)
 {
-	assert_param(channel_id < ChannelCount);
+	assert_param(channel_id < CAN_Node_ChannelCount);
 
 	return module_ids[channel_id];
 }
@@ -89,7 +87,7 @@ void CAN_Node_handle_packet(uint8_t rtr, HA_CAN_PacketId* packet_id, uint8_t len
 
 		default:
 			module_index -= 2;
-			if (module_index < ChannelCount)
+			if (module_index < CAN_Node_ChannelCount)
 				module = channel_modules[module_index];
 			break;
 	}
@@ -109,7 +107,7 @@ void CAN_Node_handle_timer()
 	uint8_t i;
 
 	/* System modules do not require timer callback */
-	for (i = 0; i < ChannelCount; ++i)
+	for (i = 0; i < CAN_Node_ChannelCount; ++i)
 	{
 		if (channel_modules[i] != NULL && channel_modules[i]->on_timer != NULL)
 			channel_modules[i]->on_timer(i);
@@ -132,10 +130,10 @@ void CAN_Node_save_modules()
 	if (proto_module->on_save != NULL)
 		proto_module->on_save(0, &stream);
 
-	for (i = 0; i < ChannelCount; ++i)
+	for (i = 0; i < CAN_Node_ChannelCount; ++i)
 		CAN_Node_EEStream_write_byte(&stream, module_ids[i]);
 
-	for (i = 0; i < ChannelCount; ++i)
+	for (i = 0; i < CAN_Node_ChannelCount; ++i)
 	{
 		if (channel_modules[i] != NULL && channel_modules[i]->on_save != NULL)
 			channel_modules[i]->on_save(i, &stream);
@@ -160,13 +158,13 @@ void CAN_Node_load_modules()
 	if (proto_module->on_load != NULL)
 		proto_module->on_load(0, &stream);
 
-	for (i = 0; i < ChannelCount; ++i)
+	for (i = 0; i < CAN_Node_ChannelCount; ++i)
 	{
 		function_id = CAN_Node_EEStream_read_byte(&stream);
 		CAN_Node_set_channel(i, function_id < HA_CAN_Node_FunctionCount ? function_id : HA_CAN_Node_Function_None);
 	}
 
-	for (i = 0; i < ChannelCount; ++i)
+	for (i = 0; i < CAN_Node_ChannelCount; ++i)
 	{
 		if (channel_modules[i] != NULL && channel_modules[i]->on_load != NULL)
 			channel_modules[i]->on_load(i, &stream);

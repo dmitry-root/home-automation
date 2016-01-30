@@ -3,6 +3,9 @@
 #include "stm8s_gpio.h"
 
 #include "led.h"
+#include "clock.h"
+#include "module.h"
+#include "can.h"
 
 
 static void configure_clock();
@@ -15,6 +18,23 @@ void main()
 	configure_unused_gpio();
 
 	CAN_Node_Led_init_all();
+	CAN_Node_CAN_init();
+	CAN_Node_Clock_init();
+	CAN_Node_load_modules();
+
+	while (1)
+	{
+		wfi();
+		disableInterrupts();
+
+		if (CAN_Node_Clock_check_pending())
+		{
+			CAN_Node_Led_clock();
+			CAN_Node_handle_timer();
+		}
+
+		CAN_Node_CAN_handle_packets();
+	}
 }
 
 

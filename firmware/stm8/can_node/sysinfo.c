@@ -2,6 +2,7 @@
 #include "can.h"
 #include "ha/can_proto.h"
 #include "ha/can_node.h"
+#include "stm8s_wwdg.h"
 
 #include <stddef.h>
 
@@ -132,5 +133,5 @@ void CAN_Node_Sysinfo_set_device_id(uint8_t value)
 	/* TODO check some hw jumper is set */
 	device_id = value;
 	CAN_Node_save_modules();
-	halt();
+	WWDG_SWReset();
 }

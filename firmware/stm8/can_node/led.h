@@ -26,6 +26,7 @@ typedef enum
 
 
 void CAN_Node_Led_init_all();
+void CAN_Node_Led_clock();
 
 void CAN_Node_Led_switch(CAN_Node_Led led, FunctionalState state);
 void CAN_Node_Led_blink(CAN_Node_Led led, uint8_t scale);

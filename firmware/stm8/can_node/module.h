@@ -35,6 +35,11 @@ typedef struct CAN_Node_Module_s
 } CAN_Node_Module;
 
 
+enum
+{
+	CAN_Node_ChannelCount = 4
+};
+
 /* === Module management API === */
 
 void CAN_Node_register_sysinfo_module(CAN_Node_Module* module);
