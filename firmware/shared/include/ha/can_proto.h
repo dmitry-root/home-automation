@@ -27,7 +27,7 @@ extern "C" {
  *    --------------+-------------------+---------------------------------------
  *     15:0         | Address           | Device-specific address of value to read/write
  *     22:16        | Device ID         | Slave device identifier (0-127)
- *     23           | Direction         | 0: slave -> master, 1: master -> slave
+ *     23           | Reserved          | Must be set to 1
  *     27:24        | Priority          | Message priority bits (0 => highest, 15 => lowest)
  *     28           | Update ID         | Special bit for programming device ID
  *
@@ -36,12 +36,10 @@ extern "C" {
  *
  * The CAN RTR bit is used as described in CAN protocol:
  *
- *      RTR     | Direction       | Meaning
- *    ----------+-----------------+-------------------------------
- *     0 (data) | 0 (s->m)        | Write value to slave at specified address
- *     0 (data) | 1 (m->s)        | Reply with requested value at specified address
- *     1 (req)  | 0 (s->m)        | Meaningless
- *     1 (req)  | 1 (m->s)        | Request a value at specified address
+ *      RTR     | Meaning
+ *    ----------+-------------------------------------------------
+ *     1 (req)  | Request a value at specified address
+ *     0 (data) | Reply with requested value at specified address
  *
  *
  * 3. Data (0-8 bytes)
@@ -68,7 +66,7 @@ extern "C" {
 typedef struct HA_CAN_PacketId_s
 {
 	uint8_t priority;
-	uint8_t direction : 1;
+	uint8_t reserved : 1;
 	uint8_t device_id : 7;
 	uint16_t address;
 } HA_CAN_PacketId;
@@ -78,7 +76,7 @@ uint32_t HA_CAN_packet_id_to_number(const HA_CAN_PacketId* packet_id)
 {
 	return
 		((uint32_t)(packet_id->priority & 0x0f) << 24) |
-		((uint32_t)packet_id->direction << 23) |
+		(1 << 23) |
 		((uint32_t)packet_id->device_id << 16) |
 		packet_id->address;
 }
@@ -87,7 +85,7 @@ static inline
 void HA_CAN_number_to_packet_id(uint32_t value, HA_CAN_PacketId* result)
 {
 	result->priority = (value >> 24) & 0x0f;
-	result->direction = (value >> 23) & 1;
+	result->reserved = 1;
 	result->device_id = (value >> 16) & 0x7f;
 	result->address = value & 0xffff;
 }

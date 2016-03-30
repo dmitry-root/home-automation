@@ -38,6 +38,7 @@ COMMON_FLAGS := -I$(TIVAWARE_INSTALLATION_DIR) -D PART_$(BOARD) -D gcc -D TIVAWA
 COMMON_FLAGS += $(INCLUDES)
 COMMON_FLAGS += $(DEFINES)
 COMMON_FLAGS += -I"$(NDK_INSTALLATION_DIR)/ti/ndk/inc/bsd" -D_POSIX_SOURCE
+COMMON_FLAGS += $(addprefix -I,$(CXX_STDINC_DIRS))
 DEBUG_FLAGS = -O0
 RELEASE_FLAGS = -Os
 
@@ -48,9 +49,9 @@ else
 endif
 
 CFLAGS := $(COMMON_FLAGS) $(BUILD_FLAGS)
-CXXFLAGS := $(COMMON_FLAGS) $(BUILD_FLAGS) -fno-exceptions -fno-rtti
+CXXFLAGS := $(COMMON_FLAGS) $(BUILD_FLAGS) -fno-exceptions -fno-rtti -std=c++11
 
-LFLAGS := -L$(TIVAWARE_INSTALLATION_DIR)/grlib/gcc -L$(TIVAWARE_INSTALLATION_DIR)/usblib/gcc -L$(TIVAWARE_INSTALLATION_DIR)/driverlib/gcc -lgr -lusb -ldriver -march=armv7e-m -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -nostartfiles -static -Wl,--gc-sections -L$(BIOS_INSTALLATION_DIR)gnu/targets/arm/libs/install-native/arm-none-eabi/lib/armv7e-m/fpu -lgcc -lc -lm -lnosys
+LFLAGS := -L$(TIVAWARE_INSTALLATION_DIR)/grlib/gcc -L$(TIVAWARE_INSTALLATION_DIR)/usblib/gcc -L$(TIVAWARE_INSTALLATION_DIR)/driverlib/gcc -lgr -lusb -ldriver -march=armv7e-m -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -nostartfiles -static -Wl,--gc-sections -L$(BIOS_INSTALLATION_DIR)gnu/targets/arm/libs/install-native/arm-none-eabi/lib/armv7e-m/fpu -lgcc -lc -lm -lnosys -lstdc++_nano -lsupc++_nano
 
 CC := "$(GCC_ROOT)/bin/arm-none-eabi-gcc"
 CXX := "$(GCC_ROOT)/bin/arm-none-eabi-g++"

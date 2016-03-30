@@ -115,6 +115,8 @@ void CAN_Node_handle_timer()
 }
 
 
+enum { Header = 0x53 };
+
 void CAN_Node_save_modules()
 {
 	uint8_t i;
@@ -124,6 +126,7 @@ void CAN_Node_save_modules()
 		return;
 
 	CAN_Node_EEStream_open(&stream, CAN_Node_EEStream_Write);
+	CAN_Node_EEStream_write_byte(&stream, Header);
 
 	if (sysinfo_module->on_save != NULL)
 		sysinfo_module->on_save(0, &stream);
@@ -152,6 +155,10 @@ void CAN_Node_load_modules()
 		return;
 
 	CAN_Node_EEStream_open(&stream, CAN_Node_EEStream_Read);
+
+	i = CAN_Node_EEStream_read_byte(&stream);
+	if (i != Header) // magic number
+		return;
 
 	if (sysinfo_module->on_load != NULL)
 		sysinfo_module->on_load(0, &stream);

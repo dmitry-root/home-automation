@@ -34,35 +34,28 @@ SOFTWARE.
 #include <ti/sysbios/knl/Task.h>
 #include <ti/drivers/GPIO.h>
 
-#define PART_TM4C1290NCPDT 1
-#include <inc/hw_can.h>
-#include <inc/hw_memmap.h>
-#include <inc/hw_types.h>
-#include <driverlib/can.h>
 #include <driverlib/sysctl.h>
-#include <driverlib/gpio.h>
-#include <driverlib/pin_map.h>
 
 #include "board.h"
 
+static uint32_t g_actual_freq = 0;
+
+uint32_t get_system_clock_freqency()
+{
+	return g_actual_freq;
+}
 
 
 extern "C"
 int main()
 {
-    /* Call board init functions */
+	/* Configure system clock */
+	g_actual_freq = SysCtlClockFreqSet(SYSCTL_XTAL_25MHZ | SYSCTL_USE_PLL | SYSCTL_CFG_VCO_320, 80000000);
+
+	/* Call board init functions */
 	Board_initGeneral();
 	Board_initGPIO();
 	Board_initEMAC();
-
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
-	GPIOPinConfigure(GPIO_PA0_CAN0RX);
-	GPIOPinConfigure(GPIO_PA1_CAN0TX);
-	GPIOPinTypeCAN(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_CAN0);
-	CANInit(CAN0_BASE);
-	CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 500000);
-	CANEnable(CAN0_BASE);
 
 	BIOS_start();
 

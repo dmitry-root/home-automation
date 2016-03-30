@@ -21,11 +21,11 @@ extern "C" {
 #define TELNET_PORT 23
 
 
-class TcpServer : util::NonCopyable
+class CanServer : util::NonCopyable
 {
 public:
-	TcpServer();
-	~TcpServer();
+	CanServer();
+	~CanServer();
 
 	void run();
 
@@ -38,7 +38,7 @@ private:
 };
 
 
-TcpServer::TcpServer() :
+CanServer::TcpServer() :
 	server_fd_(-1),
 	started_(false)
 {
@@ -65,13 +65,13 @@ TcpServer::TcpServer() :
 	started_ = true;
 }
 
-TcpServer::~TcpServer()
+CanServer::~TcpServer()
 {
 	if (server_fd_ != -1)
 		::close(server_fd_);
 }
 
-void TcpServer::run()
+void CanServer::run()
 {
 	if (!started_)
 		return;
@@ -92,7 +92,7 @@ static void send_str(int fd, const char* str)
 	::send(fd, str, ::strlen(str), 0);
 }
 
-void TcpServer::handle_connection(int client_fd)
+void CanServer::handle_connection(int client_fd)
 {
 	send_str(client_fd, "Measuring temperature...\n");
 
@@ -141,5 +141,5 @@ void TcpServer::handle_connection(int client_fd)
 extern "C"
 void tcp_server(UArg, UArg)
 {
-	TcpServer().run();
+	CanServer().run();
 }

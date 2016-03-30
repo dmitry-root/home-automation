@@ -18,22 +18,23 @@ CAN_InitStatus_TypeDef CAN_Node_CAN_init()
 	HA_CAN_PacketId pid_mask = {0};
 	uint32_t address, mask;
 
+	/* The system clock is set to 8 MHz. We setup CAN to work with 125 kbit/s speed */
 	status = CAN_Init(
 		CAN_MasterCtrl_AllDisabled,
 		CAN_Mode_Normal,
 		CAN_SynJumpWidth_1TimeQuantum,
 		CAN_BitSeg1_8TimeQuantum,
 		CAN_BitSeg2_7TimeQuantum,
-		1);
+		4);   /* prescaler = 4: baud rate = 8 MHz / 4 / 16 = 125 kbps */
 
 	if (status != CAN_InitStatus_Success)
 		return status;
 
 	/* create packet filter */
 	pid.device_id = device_id;
-	pid.direction = 1;
+	pid.reserved = 1;
 	pid_mask.device_id = 0x7f;
-	pid_mask.direction = 1;
+	pid_mask.reserved = 1;
 	address = HA_CAN_packet_id_to_number(&pid);
 	mask = HA_CAN_packet_id_to_number(&pid_mask);
 
@@ -114,7 +115,6 @@ void CAN_Node_CAN_send_reply(uint8_t length, uint8_t* value)
 {
 	uint32_t send_id;
 
-	packet_id.direction = 0;
 	send_id = HA_CAN_packet_id_to_number(&packet_id);
 
 	CAN_Transmit(send_id, CAN_Id_Extended, CAN_RTR_Data, length, value);
@@ -126,7 +126,7 @@ void CAN_Node_CAN_send_data(uint8_t channel_id, uint8_t index, uint8_t length, u
 	uint32_t send_id;
 
 	packet_id.priority = 0; /* TODO */
-	packet_id.direction = 0;
+	packet_id.reserved = 1;
 	packet_id.device_id = get_device_id();
 	packet_id.address = (((uint16_t)channel_id + 2) << 8) | index;
 

@@ -41,7 +41,7 @@ void main()
 /** Configure clock */
 void configure_clock()
 {
-	CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV1);
+	CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV2); // 8 MHz clock (as the XTAL installed on board)
 
 	// disable unneeded peripherals
 	CLK_PeripheralClockConfig(CLK_PERIPHERAL_SPI, DISABLE);
@@ -53,24 +53,20 @@ void configure_clock()
 
 void configure_unused_gpio()
 {
-	GPIO_Init(GPIOA, GPIO_PIN_4, GPIO_MODE_IN_PU_NO_IT);
-	GPIO_Init(GPIOA, GPIO_PIN_5, GPIO_MODE_IN_PU_NO_IT);
-	GPIO_Init(GPIOA, GPIO_PIN_6, GPIO_MODE_IN_PU_NO_IT);
+	GPIO_TypeDef* const gpio[] = { GPIOA, GPIOB, GPIOC, GPIOD, GPIOE };
+	const uint8_t unused_pins[] =
+	{
+		GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6, /* A */
+		GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7, /* B */
+		GPIO_PIN_5 | GPIO_PIN_6, /* C */
+		GPIO_PIN_0 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6, /* D */
+		GPIO_PIN_0 | GPIO_PIN_5 | GPIO_PIN_6 /* E */
+	};
 
-	GPIO_Init(GPIOB, GPIO_PIN_4, GPIO_MODE_IN_PU_NO_IT);
-	GPIO_Init(GPIOB, GPIO_PIN_5, GPIO_MODE_IN_PU_NO_IT);
-	GPIO_Init(GPIOB, GPIO_PIN_6, GPIO_MODE_IN_PU_NO_IT);
-	GPIO_Init(GPIOB, GPIO_PIN_7, GPIO_MODE_IN_PU_NO_IT);
+	uint8_t i,j;
 
-	GPIO_Init(GPIOC, GPIO_PIN_5, GPIO_MODE_IN_PU_NO_IT);
-	GPIO_Init(GPIOC, GPIO_PIN_6, GPIO_MODE_IN_PU_NO_IT);
-
-	GPIO_Init(GPIOD, GPIO_PIN_0, GPIO_MODE_IN_PU_NO_IT);
-	GPIO_Init(GPIOD, GPIO_PIN_4, GPIO_MODE_IN_PU_NO_IT);
-	GPIO_Init(GPIOD, GPIO_PIN_5, GPIO_MODE_IN_PU_NO_IT);
-	GPIO_Init(GPIOD, GPIO_PIN_6, GPIO_MODE_IN_PU_NO_IT);
-
-	GPIO_Init(GPIOE, GPIO_PIN_0, GPIO_MODE_IN_PU_NO_IT);
-	GPIO_Init(GPIOE, GPIO_PIN_5, GPIO_MODE_IN_PU_NO_IT);
-	GPIO_Init(GPIOE, GPIO_PIN_6, GPIO_MODE_IN_PU_NO_IT);
+	for (i = 0; i < sizeof(unused_pins); i++)
+		for (j = 0; j < 8; j++)
+			if ((unused_pins[i] & (1 << j)) != 0)
+				GPIO_Init(gpio[i], 1 << j, GPIO_MODE_IN_PU_NO_IT);
 }
