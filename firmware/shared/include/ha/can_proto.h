@@ -76,7 +76,7 @@ uint32_t HA_CAN_packet_id_to_number(const HA_CAN_PacketId* packet_id)
 {
 	return
 		((uint32_t)(packet_id->priority & 0x0f) << 24) |
-		(1 << 23) |
+		((uint32_t)1u << 23) |
 		((uint32_t)packet_id->device_id << 16) |
 		packet_id->address;
 }

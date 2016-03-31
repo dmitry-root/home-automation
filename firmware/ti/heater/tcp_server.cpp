@@ -38,7 +38,7 @@ private:
 };
 
 
-CanServer::TcpServer() :
+CanServer::CanServer() :
 	server_fd_(-1),
 	started_(false)
 {
@@ -65,7 +65,7 @@ CanServer::TcpServer() :
 	started_ = true;
 }
 
-CanServer::~TcpServer()
+CanServer::~CanServer()
 {
 	if (server_fd_ != -1)
 		::close(server_fd_);

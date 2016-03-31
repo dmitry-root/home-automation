@@ -1,4 +1,5 @@
 #include "can.h"
+#include "led.h"
 #include "module.h"
 #include "sysinfo.h"
 
@@ -105,6 +106,7 @@ void CAN_Node_CAN_handle_packets()
 {
 	while (CAN_MessagePending() > 0)
 	{
+		CAN_Node_Led_blink(CAN_Node_Led_Info, 1);
 		CAN_Receive();
 		handle_received_data();
 		CAN_FIFORelease();

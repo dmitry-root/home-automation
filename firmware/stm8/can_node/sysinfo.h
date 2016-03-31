@@ -6,7 +6,7 @@
  * System information for internal use and for CAN reporting.
  */
 
-CAN_Node_Module* CAN_Node_Sysinfo_get_module();
+CAN_Node_Module* CAN_Node_Sysinfo_get_module(void);
 
-uint8_t CAN_Node_Sysinfo_get_device_id();
+uint8_t CAN_Node_Sysinfo_get_device_id(void);
 void CAN_Node_Sysinfo_set_device_id(uint8_t value);

@@ -118,12 +118,12 @@ CAN_Node_Module sysinfo_module =
 
 /* public API */
 
-CAN_Node_Module* CAN_Node_Sysinfo_get_module()
+CAN_Node_Module* CAN_Node_Sysinfo_get_module(void)
 {
 	return &sysinfo_module;
 }
 
-uint8_t CAN_Node_Sysinfo_get_device_id()
+uint8_t CAN_Node_Sysinfo_get_device_id(void)
 {
 	return device_id;
 }

@@ -52,8 +52,8 @@ uint8_t CAN_Node_get_channel(uint8_t channel_id);
 
 void CAN_Node_handle_packet(uint8_t rtr, HA_CAN_PacketId* packet_id, uint8_t length, const uint8_t* data);
 
-void CAN_Node_handle_timer();
+void CAN_Node_handle_timer(void);
 
-void CAN_Node_save_modules();
-void CAN_Node_load_modules();
+void CAN_Node_save_modules(void);
+void CAN_Node_load_modules(void);
 

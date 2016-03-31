@@ -7,15 +7,20 @@
 #include "module.h"
 #include "can.h"
 
+#include "sysinfo.h"
+#include "mod_proto.h"
 
-static void configure_clock();
-static void configure_unused_gpio();
+
+static void configure_clock(void);
+static void configure_unused_gpio(void);
+static void register_modules(void);
 
 
 void main()
 {
 	configure_clock();
 	configure_unused_gpio();
+	register_modules();
 
 	CAN_Node_Led_init_all();
 	CAN_Node_CAN_init();
@@ -39,9 +44,16 @@ void main()
 
 
 /** Configure clock */
-void configure_clock()
+void configure_clock(void)
 {
-	CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV2); // 8 MHz clock (as the XTAL installed on board)
+	// Try to use 8 MHz XTAL, and fall back to HSI on failure
+	CLK_HSECmd(ENABLE);
+	if (CLK_ClockSwitchConfig(CLK_SWITCHMODE_AUTO, CLK_SOURCE_HSE, DISABLE, CLK_CURRENTCLOCKSTATE_DISABLE) == ERROR)
+	{
+		// Error starting HSE, fall back to HSI
+		CLK_HSECmd(DISABLE);
+		CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV2); // Configure 8 MHz clock from HSI
+	}
 
 	// disable unneeded peripherals
 	CLK_PeripheralClockConfig(CLK_PERIPHERAL_SPI, DISABLE);
@@ -51,7 +63,7 @@ void configure_clock()
 	// TODO consider which timers to use, disable unneeded
 }
 
-void configure_unused_gpio()
+void configure_unused_gpio(void)
 {
 	GPIO_TypeDef* const gpio[] = { GPIOA, GPIOB, GPIOC, GPIOD, GPIOE };
 	const uint8_t unused_pins[] =
@@ -63,10 +75,14 @@ void configure_unused_gpio()
 		GPIO_PIN_0 | GPIO_PIN_5 | GPIO_PIN_6 /* E */
 	};
 
-	uint8_t i,j;
+	uint8_t i;
 
 	for (i = 0; i < sizeof(unused_pins); i++)
-		for (j = 0; j < 8; j++)
-			if ((unused_pins[i] & (1 << j)) != 0)
-				GPIO_Init(gpio[i], 1 << j, GPIO_MODE_IN_PU_NO_IT);
+		GPIO_Init(gpio[i], unused_pins[i], GPIO_MODE_IN_PU_NO_IT);
+}
+
+void register_modules(void)
+{
+	CAN_Node_register_sysinfo_module( CAN_Node_Sysinfo_get_module() );
+	CAN_Node_register_proto_module( CAN_Node_mod_proto() );
 }

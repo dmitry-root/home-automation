@@ -102,7 +102,7 @@ void CAN_Node_handle_packet(uint8_t rtr, HA_CAN_PacketId* packet_id, uint8_t len
 }
 
 
-void CAN_Node_handle_timer()
+void CAN_Node_handle_timer(void)
 {
 	uint8_t i;
 
@@ -117,7 +117,7 @@ void CAN_Node_handle_timer()
 
 enum { Header = 0x53 };
 
-void CAN_Node_save_modules()
+void CAN_Node_save_modules(void)
 {
 	uint8_t i;
 	CAN_Node_EEStream stream;
@@ -145,7 +145,7 @@ void CAN_Node_save_modules()
 	CAN_Node_EEStream_close(&stream);
 }
 
-void CAN_Node_load_modules()
+void CAN_Node_load_modules(void)
 {
 	uint8_t i;
 	CAN_Node_EEStream stream;
