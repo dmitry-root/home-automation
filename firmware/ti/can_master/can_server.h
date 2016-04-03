@@ -2,6 +2,13 @@
 
 #include "util/NonCopyable.h"
 
+extern "C" {
+#include <socketndk.h>
+}
+
+
+struct CanPacket;
+
 class CanServer : util::NonCopyable
 {
 public:
@@ -18,10 +25,10 @@ private:
 	{
 		Client();
 		~Client();
-		bool valid() const { return fd != -1; }
+		bool valid() const { return fd != INVALID_SOCKET; }
 		void clear();
 
-		int fd;
+		SOCKET fd;
 		bool interactive;
 	};
 
@@ -30,7 +37,10 @@ private:
 	void handle_signal();
 	void handle_client(size_t client_index);
 
+	void handle_can_packet(const CanPacket& packet);
+
 	void greeting(size_t client_index);
+	bool parse_packet(const char* message, CanPacket& packet, bool& request);
 
 private:
 	CanServer();
@@ -45,8 +55,8 @@ private:
 	};
 
 private:
-	int server_fd_[ServerCount];
-	int signal_send_, signal_recv_;
+	SOCKET server_fd_[ServerCount] = { INVALID_SOCKET };
+	SOCKET signal_send_ = INVALID_SOCKET, signal_recv_ = INVALID_SOCKET;
 	Client clients_[MaxClients];
-	bool started_;
+	bool started_ = false;
 };

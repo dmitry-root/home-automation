@@ -91,11 +91,9 @@ void HA_CAN_number_to_packet_id(uint32_t value, HA_CAN_PacketId* result)
 }
 
 
-enum HA_CAN_SpecialId
-{
-	HA_CAN_SpecialId_Update = 0x1fffffff
-};
-
+static const uint32_t HA_CAN_SpecialId_Update = 0x1fffffff;
+static const uint32_t HA_CAN_ReservedBits = ((uint32_t)1u << 23);
+static const uint32_t HA_CAN_ReservedMask = ((uint32_t)1u << 23) | ((uint32_t)1u << 28);
 
 
 /**

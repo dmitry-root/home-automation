@@ -18,19 +18,24 @@ static void register_modules(void);
 
 void main()
 {
+	disableInterrupts();
+
 	configure_clock();
 	configure_unused_gpio();
 	register_modules();
 
 	CAN_Node_Led_init_all();
-	CAN_Node_CAN_init();
+	if (CAN_Node_CAN_init() != CAN_InitStatus_Success)
+		CAN_Node_Led_switch(CAN_Node_Led_Error, ENABLE);
 	CAN_Node_Clock_init();
 	CAN_Node_load_modules();
 
+	CAN_Node_Led_blink(CAN_Node_Led_Info, 10);
+
 	while (1)
 	{
-		wfi();
-		disableInterrupts();
+		//wfi();
+		//disableInterrupts();
 
 		if (CAN_Node_Clock_check_pending())
 		{

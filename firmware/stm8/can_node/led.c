@@ -45,7 +45,7 @@ void CAN_Node_Led_init_all()
 
 	/* Configure GPIOs */
 	for (led = 0; led < CAN_Node_LedCount; led++)
-		GPIO_Init(leds[led].gpio, leds[led].pin, GPIO_MODE_OUT_PP_HIGH_FAST);
+		GPIO_Init(leds[led].gpio, leds[led].pin, GPIO_MODE_OUT_PP_LOW_FAST);
 }
 
 

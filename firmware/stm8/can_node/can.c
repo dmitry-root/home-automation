@@ -5,12 +5,12 @@
 
 
 static inline
-uint8_t get_device_id()
+uint8_t get_device_id(void)
 {
 	return CAN_Node_Sysinfo_get_device_id();
 }
 
-CAN_InitStatus_TypeDef CAN_Node_CAN_init()
+CAN_InitStatus_TypeDef CAN_Node_CAN_init(void)
 {
 	CAN_InitStatus_TypeDef status;
 	const uint8_t device_id = get_device_id();
@@ -18,6 +18,8 @@ CAN_InitStatus_TypeDef CAN_Node_CAN_init()
 	HA_CAN_PacketId pid = {0};
 	HA_CAN_PacketId pid_mask = {0};
 	uint32_t address, mask;
+
+	CAN_DeInit();
 
 	/* The system clock is set to 8 MHz. We setup CAN to work with 125 kbit/s speed */
 	status = CAN_Init(
@@ -47,7 +49,7 @@ CAN_InitStatus_TypeDef CAN_Node_CAN_init()
 	fm[2] = (uint8_t)(mask    >> 7);
 	fr[3] = (uint8_t)(address << 1);
 	fm[3] = (uint8_t)(mask    << 1);
-
+/*
 	CAN_FilterInit(
 		CAN_FilterNumber_0,
 		ENABLE,
@@ -55,8 +57,18 @@ CAN_InitStatus_TypeDef CAN_Node_CAN_init()
 		CAN_FilterScale_32Bit,
 		fr[0], fr[1], fr[2], fr[3],
 		fm[0], fm[1], fm[2], fm[3]);
+*/
+
+	CAN_FilterInit(
+		CAN_FilterNumber_0,
+		ENABLE,
+		CAN_FilterMode_IdMask,
+		CAN_FilterScale_32Bit,
+		0, 0, 0, 0,
+		0, 0, 0, 0);
 
 	/* Filter for special packet id */
+
 	CAN_FilterInit(
 		CAN_FilterNumber_1,
 		ENABLE,
@@ -65,14 +77,14 @@ CAN_InitStatus_TypeDef CAN_Node_CAN_init()
 		0xff, 0xef /* RTR = 0 */, 0xff, 0xfe,
 		0xff, 0xff, 0xff, 0xfe);
 
-	CAN_ITConfig(CAN_IT_FMP, ENABLE);
+	//CAN_ITConfig(CAN_IT_FMP, ENABLE);
 
 	return status;
 }
 
 static HA_CAN_PacketId packet_id;
 
-static void handle_received_data()
+static void handle_received_data(void)
 {
 	uint32_t received_id;
 	uint8_t rtr, len, i;
@@ -99,17 +111,18 @@ static void handle_received_data()
 		return;
 	}
 
-	CAN_Node_handle_packet(rtr, &packet_id, len, data);
+	//CAN_Node_handle_packet(rtr, &packet_id, len, data); -- TODO uncomment
+	CAN_Node_CAN_send_reply(len, data);
 }
 
-void CAN_Node_CAN_handle_packets()
+void CAN_Node_CAN_handle_packets(void)
 {
 	while (CAN_MessagePending() > 0)
 	{
 		CAN_Node_Led_blink(CAN_Node_Led_Info, 1);
 		CAN_Receive();
 		handle_received_data();
-		CAN_FIFORelease();
+		//CAN_FIFORelease();
 	}
 }
 
