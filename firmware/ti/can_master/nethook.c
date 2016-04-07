@@ -6,7 +6,7 @@
 #include <ti/sysbios/BIOS.h>
 #include <ti/sysbios/knl/Task.h>
 
-#define TCPHANDLERSTACK 1024
+#define TCPHANDLERSTACK 4096
 
 void tcp_server(UArg, UArg);
 

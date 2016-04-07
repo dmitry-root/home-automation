@@ -25,8 +25,9 @@ uint32_t get_system_clock_freqency();
 enum
 {
 	TxBegin = 0,
-	TxEnd = 16,
-	RxBegin = TxEnd,
+	TxEnd = 15,
+	TxRxRemote = 15,
+	RxBegin = 16,
 	RxEnd = 32,
 
 	RxMask = ~((1 << RxBegin) - 1),
@@ -44,8 +45,8 @@ CanMaster& CanMaster::instance()
 void CanMaster::interrupt_handler(UArg)
 {
 	// Clear Rx objects interrupts
-	for (uint32_t i = RxBegin; i < RxEnd; ++i)
-		CANIntClear(CAN0_BASE, i + 1);
+	const unsigned long cause = CANIntStatus(CAN0_BASE, CAN_INT_STS_CAUSE);
+	CANIntClear(CAN0_BASE, cause);
 	CanServer::instance().send_signal();
 }
 
@@ -100,15 +101,24 @@ bool CanMaster::do_send(uint32_t msg_id, const uint8_t* data, size_t length, boo
 	if (!request && !data)
 		return false;
 
-	const uint32_t busy_objects = CANStatusGet(CAN0_BASE, CAN_STS_TXREQUEST);
 	uint32_t object_id = 0;
+	const uint32_t busy_objects = CANStatusGet(CAN0_BASE, CAN_STS_TXREQUEST);
 
-	for (uint32_t i = TxBegin; i < TxEnd; ++i)
+	if (request)
 	{
-		if (busy_objects & (1 << i))
-			continue;
-		object_id = i+1;
-		break;
+		object_id = TxRxRemote + 1;
+		if (busy_objects & (1 << TxRxRemote))
+			return false;
+	}
+	else
+	{
+		for (uint32_t i = TxBegin; i < TxEnd; ++i)
+		{
+			if (busy_objects & (1 << i))
+				continue;
+			object_id = i+1;
+			break;
+		}
 	}
 
 	if (object_id == 0)
@@ -120,12 +130,11 @@ bool CanMaster::do_send(uint32_t msg_id, const uint8_t* data, size_t length, boo
 
 	if (!request)
 	{
-		object.pui8MsgData = tx_data_ + (object_id-1)*MsgLen;
+		object.pui8MsgData = const_cast<uint8_t*>(data);
 		object.ui32MsgLen = length;
-		::memcpy(object.pui8MsgData, data, length);
 	}
 
-	CANMessageSet(CAN0_BASE, object_id, &object, request ? MSG_OBJ_TYPE_TX : MSG_OBJ_TYPE_TX_REMOTE);
+	CANMessageSet(CAN0_BASE, object_id, &object, request ? MSG_OBJ_TYPE_TX_REMOTE : MSG_OBJ_TYPE_TX);
 	return true;
 }
 
@@ -167,11 +176,34 @@ bool CanMaster::receive(CanPacket& packet)
 
 	CANMessageGet(CAN0_BASE, object_id, &object, true);
 
-	if ((object.ui32Flags & MSG_OBJ_NEW_DATA) == 0)
+	if ((object.ui32Flags & MSG_OBJ_NEW_DATA) == 0 || object.ui32MsgLen > MsgLen)
 		return false;
 
 	packet.length = object.ui32MsgLen;
 	HA_CAN_number_to_packet_id(object.ui32MsgID, &packet.id);
 
 	return true;
+}
+
+bool CanMaster::receive_response(CanPacket& packet)
+{
+	tCANMsgObject object = {0};
+	object.pui8MsgData = packet.data;
+	object.ui32MsgLen = MsgLen;
+	CANMessageGet(CAN0_BASE, TxRxRemote + 1, &object, true);
+	if ((object.ui32Flags & MSG_OBJ_NEW_DATA) != 0)
+		return false;
+
+	CANMessageClear(CAN0_BASE, TxRxRemote + 1);
+
+	if (object.ui32MsgLen > MsgLen)
+		return false;
+
+	packet.length = object.ui32MsgLen;
+	HA_CAN_number_to_packet_id(object.ui32MsgID, &packet.id);
+	return true;
+}
+
+void CanMaster::clear_request()
+{
 }

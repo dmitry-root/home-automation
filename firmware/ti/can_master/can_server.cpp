@@ -52,13 +52,6 @@ CanServer::CanServer()
 			return;
 	}
 
-	SOCKET pipe_handles[2];
-	if (::pipe(&pipe_handles[0], &pipe_handles[1]) == SOCKET_ERROR)
-		return;
-
-	signal_send_ = pipe_handles[0];
-	signal_recv_ = pipe_handles[1];
-
 	started_ = true;
 }
 
@@ -69,11 +62,6 @@ CanServer::~CanServer()
 		if (server_fd_[i] != INVALID_SOCKET)
 			fdClose(server_fd_[i]);
 	}
-
-	if (signal_send_ != INVALID_SOCKET)
-		fdClose(signal_send_);
-	if (signal_recv_ != INVALID_SOCKET)
-		fdClose(signal_recv_);
 }
 
 void CanServer::run()
@@ -81,59 +69,37 @@ void CanServer::run()
 	if (!started_)
 		return;
 
-	// We use internal fdPoll() function instead of select, to reduce the unnecessary overhead.
-	const size_t max_poll_items = ServerCount + MaxClients + 1; // 1 is for signal fd.
-	FDPOLLITEM items[max_poll_items];
+	task_handle_ = ti_sysbios_knl_Task_self();
 
-	const size_t signal_index = 0;
-	const size_t server_index[ServerCount] = { 1, 2 };
-	const size_t client_index = 3;
-	size_t client_map[MaxClients]; // client index -> poll item index
-
-	// Fill poll items that will not change.
-	items[signal_index].fd = signal_recv_;
-	items[server_index[0]].fd = server_fd_[0];
-	items[server_index[1]].fd = server_fd_[1];
-
+	fd_set rdset;
 	while (true)
 	{
-		for (size_t i = 0; i < max_poll_items; ++i)
-		{
-			items[i].eventsRequested = POLLIN;
-			items[i].eventsDetected = 0;
-		}
-
-		// Fill client poll items.
-		size_t poll_count = client_index;
-		for (size_t i = 0; i < MaxClients; ++i)
-		{
-			client_map[i] = 0;
-			if (!clients_[i].valid())
-				continue;
-			items[poll_count].fd = (void*)clients_[i].fd;
-			client_map[i] = poll_count++;
-		}
-
-		// Poll request
-		if (fdPoll(items, poll_count, POLLINFTIM) == SOCKET_ERROR)
-			break;
-
-		// Handle result
-		if (items[signal_index].eventsDetected & POLLIN)
-			handle_signal();
+		NDK_FD_ZERO(&rdset);
 
 		for (size_t i = 0; i < ServerCount; ++i)
-			if (items[server_index[i]].eventsDetected & POLLIN)
+			NDK_FD_SET(server_fd_[i], &rdset);
+		for (size_t i = 0; i < MaxClients; ++i)
+			if (clients_[i].valid())
+				NDK_FD_SET(clients_[i].fd, &rdset);
+
+		// Perform wait operation
+		if (fdSelect(0, &rdset, 0, 0, 0) == SOCKET_ERROR)
+			break;
+
+		handle_signal();
+
+		for (size_t i = 0; i < ServerCount; ++i)
+			if (NDK_FD_ISSET(server_fd_[i], &rdset))
 				handle_connect(i);
 
 		for (size_t i = 0; i < MaxClients; ++i)
 		{
-			if (client_map[i] == 0 || !clients_[i].valid())
-				continue;
-			if (items[client_map[i]].eventsDetected & POLLIN)
+			if (clients_[i].valid() && NDK_FD_ISSET(clients_[i].fd, &rdset))
 				handle_client(i);
 		}
 	}
+	task_handle_ = 0;
+	util::Pin(EK_TM4C1294XL_D2).toggle();
 }
 
 void CanServer::handle_connect(size_t server_index)
@@ -160,54 +126,80 @@ void CanServer::handle_connect(size_t server_index)
 
 	// No empty clients found -- reject the connection.
 	static const char busy[] = "Busy.\r\n";
-	NDK_send(client_fd, (void*)busy, ::strlen(busy), 0);
+	NDK_send(client_fd, (void*)busy, ::strlen(busy), MSG_WAITALL);
 	fdClose(client_fd);
 }
 
 void CanServer::handle_signal()
 {
 	util::Pin(EK_TM4C1294XL_D1).toggle();
-	{
-		char recv_buf[16];
-		NDK_recv(signal_recv_, recv_buf, sizeof(recv_buf), 0);
-	}
-
 	CanPacket packet;
 	while (CanMaster::instance().receive(packet))
 		handle_can_packet(packet);
+}
+
+int CanServer::send_to_client(size_t client_index, const char* message, size_t length)
+{
+	return NDK_send(clients_[client_index].fd, (void*)message, length == (size_t)-1 ? ::strlen(message) : length, MSG_WAITALL);
 }
 
 void CanServer::handle_client(size_t client_index)
 {
 	Client& client = clients_[client_index];
 
-	char message[128];
-	const ssize_t received = NDK_recv(client.fd, message, sizeof(message), 0);
+	const ssize_t received = NDK_recv(client.fd, message_, max_message_size, 0);
 	if (received < 0)
 	{
 		client.clear();
 		return;
 	}
 
-	if (received == 0 || received >= 128)
+	if (received == 0 || received >= (ssize_t)max_message_size)
 		return;
-	message[received] = 0;
+	message_[received] = 0;
 
 	CanPacket packet;
 	bool request = false, result = false;
 
-	if (!parse_packet(message, packet, request))
+	if (!parse_packet(message_, packet, request))
 	{
 		if (client.interactive)
 		{
 			static const char usage[] = "COMMAND SYNTAX:\r\n\tdev:XX  addr:XXXX  =XXXX...\r\n\tdev:XX  addr:XXXX  ?\r\n> ";
-			NDK_send(client.fd, (void*)usage, strlen(usage), 0);
+			send_to_client(client_index, usage);
 		}
 		return;
 	}
 
 	if (request)
+	{
 		result = CanMaster::instance().send_request(packet.id);
+		if (result)
+		{
+			struct ::timeval ts = { 0, 10000 };
+			bool got_packet = false;
+			for (int i = 0; i < 10; i++)
+			{
+				fdSelect(0, 0, 0, 0, &ts);
+				if (CanMaster::instance().receive_response(packet))
+				{
+					got_packet = true;
+					break;
+				}
+			}
+			if (got_packet)
+			{
+				handle_can_packet(packet);
+				return;
+			}
+			else
+			{
+				CanMaster::instance().clear_request();
+				static const char timeout[] = "Timeout while waiting reply.\r\n> ";
+				send_to_client(client_index, timeout);
+			}
+		}
+	}
 	else
 		result = CanMaster::instance().send(packet);
 
@@ -216,18 +208,18 @@ void CanServer::handle_client(size_t client_index)
 		static const char success[] = "The packet was sent.\r\n> ";
 		static const char busy[] = "Busy, try again.\r\n> ";
 		const char* reply = result ? success : busy;
-		NDK_send(client.fd, (void*)reply, ::strlen(reply), 0);
+		send_to_client(client_index, reply);
 	}
 }
 
 bool CanServer::parse_packet(const char* message, CanPacket& packet, bool& request)
 {
 	unsigned int dev_id = 0, address = 0;
-	if (::sscanf(message, "dev:%x", &dev_id) != 1)
+	if (::sscanf(message, "dev:%x", &dev_id) != 1 || dev_id > 0xff)
 		return false;
 
 	char* ptr = ::strstr(message, "addr:");
-	if (ptr == 0 || ::sscanf(ptr, "addr:%x", &address) != 1)
+	if (ptr == 0 || ::sscanf(ptr, "addr:%x", &address) != 1 || address > 0xffff)
 		return false;
 
 	packet.id.device_id = dev_id;
@@ -259,29 +251,37 @@ bool CanServer::parse_packet(const char* message, CanPacket& packet, bool& reque
 
 void CanServer::handle_can_packet(const CanPacket& packet)
 {
-	char message[128];
-	::sprintf(message, "dev:%.2x  addr:%.4x  =", (unsigned)packet.id.device_id, (unsigned)packet.id.address);
-	size_t pos = ::strlen(message);
+	::sprintf(message_, "dev:%.2x  addr:%.4x  =", (unsigned)packet.id.device_id, (unsigned)packet.id.address);
+	size_t pos = ::strlen(message_);
 
 	for (size_t i = 0; i < packet.length; ++i)
 	{
-		if (pos >= sizeof(message) - 4)
+		if (pos >= max_message_size - 4)
 			break;
 
-		::sprintf(message + pos, "%.2x", (unsigned)packet.data[i]);
+		::sprintf(&message_[pos], "%.2x", (unsigned)packet.data[i]);
 		pos += 2;
 	}
 
-	::strcpy(message + pos, "\r\n");
+	::strcpy(&message_[pos], "\r\n");
 	pos += 2;
 
 	for (size_t i = 0; i < MaxClients; ++i)
 	{
 		if (!clients_[i].valid())
 			continue;
-		ssize_t sent = NDK_send(clients_[i].fd, message, pos, 0); // TODO nonblock?
+
+		static const char cr[] = "\r";
+		static const char prompt[] = "> ";
+
+		if (clients_[i].interactive)
+			send_to_client(i, cr);
+
+		ssize_t sent = send_to_client(i, message_, pos); // TODO nonblock?
 		if (sent < 0 || (size_t)sent != pos)
 			clients_[i].clear();
+		else if (clients_[i].interactive)
+			send_to_client(i, prompt);
 	}
 }
 
@@ -293,14 +293,13 @@ void CanServer::greeting(size_t client_index)
 
 	// TODO
 	static const char message[] = "Welcome to the HA Master Board!\r\nType 'help' for command list.\r\n\r\n> ";
-	NDK_send(client.fd, (void*)message, ::strlen(message), 0);
+	send_to_client(client_index, message);
 }
 
 void CanServer::send_signal()
 {
-	char dummy = 0;
-	NDK_send(signal_send_, &dummy, 1, MSG_DONTWAIT);
-	util::Pin(EK_TM4C1294XL_D2).toggle();
+	if (task_handle_)
+		fdSelectAbort(task_handle_);
 }
 
 
@@ -336,5 +335,7 @@ void CanServer::Client::clear()
 extern "C"
 void tcp_server(UArg, UArg)
 {
+	fdOpenSession( Task_self() );
 	CanServer::instance().run();
+	fdCloseSession( Task_self() );
 }

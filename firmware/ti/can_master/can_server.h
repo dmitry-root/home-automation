@@ -42,6 +42,8 @@ private:
 	void greeting(size_t client_index);
 	bool parse_packet(const char* message, CanPacket& packet, bool& request);
 
+	int send_to_client(size_t client_index, const char* message, size_t length = (size_t)-1);
+
 private:
 	CanServer();
 
@@ -55,8 +57,11 @@ private:
 	};
 
 private:
+	static const size_t max_message_size = 128;
+
 	SOCKET server_fd_[ServerCount] = { INVALID_SOCKET };
-	SOCKET signal_send_ = INVALID_SOCKET, signal_recv_ = INVALID_SOCKET;
 	Client clients_[MaxClients];
+	char message_[max_message_size];
 	bool started_ = false;
+	void* volatile task_handle_ = 0;
 };

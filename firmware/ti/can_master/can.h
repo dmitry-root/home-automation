@@ -22,9 +22,11 @@ public:
 	static CanMaster& instance();
 
 	bool send(const CanPacket& packet);
-	bool send_request(const HA_CAN_PacketId& packet_id);
-
 	bool receive(CanPacket& packet);
+
+	bool send_request(const HA_CAN_PacketId& packet_id);
+	bool receive_response(CanPacket& packet);
+	void clear_request();
 
 private:
 	CanMaster();
@@ -37,5 +39,4 @@ private:
 
 private:
 	ti_sysbios_hal_Hwi_Handle hwi_;
-	uint8_t tx_data_[8 * 16];
 };

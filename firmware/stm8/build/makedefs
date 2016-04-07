@@ -32,7 +32,7 @@ LIBPATHS := $(addprefix $(OUTPUT_DIR)/,$(ADD_LIBS))
 
 INCLUDES += -I$(ROOT_DIR)/libstm8s/include
 DEFINES += -DSTM8S208 -DHSE_VALUE=8000000
-COMMON_FLAGS := -mstm8 --std-sdcc99
+COMMON_FLAGS := -mstm8 --std-sdcc99 --nogcse
 COMMON_FLAGS += $(INCLUDES)
 COMMON_FLAGS += $(DEFINES)
 

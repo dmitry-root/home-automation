@@ -87,8 +87,8 @@ static HA_CAN_PacketId packet_id;
 static void handle_received_data(void)
 {
 	uint32_t received_id;
-	uint8_t rtr, len, i;
-	uint8_t data[8];
+	uint8_t rtr, len, i, device_id;
+	uint8_t data[8] = {0};
 
 	if (CAN_GetReceivedIDE() != CAN_Id_Extended)
 		return;
@@ -98,16 +98,26 @@ static void handle_received_data(void)
 	rtr = CAN_GetReceivedRTR();
 	len = CAN_GetReceivedDLC();
 
-	if (len > 8)
-		return;
-
-	for (i = 0; i < len; ++i)
-		data[i] = CAN_GetReceivedData(i);
+	if (!rtr)
+	{
+		if (len > 8)
+			return;
+		for (i = 0; i < len; ++i)
+			data[i] = CAN_GetReceivedData(i);
+	}
 
 	if (received_id == HA_CAN_SpecialId_Update)
 	{
-		if (len == 1)
+		if (rtr)
+		{
+			device_id = CAN_Node_Sysinfo_get_device_id();
+			CAN_Node_CAN_send_reply(1, &device_id);
+		}
+		else if (len == 1)
+		{
 			CAN_Node_Sysinfo_set_device_id(data[0]);
+		}
+
 		return;
 	}
 
@@ -132,7 +142,8 @@ void CAN_Node_CAN_send_reply(uint8_t length, uint8_t* value)
 
 	send_id = HA_CAN_packet_id_to_number(&packet_id);
 
-	CAN_Transmit(send_id, CAN_Id_Extended, CAN_RTR_Data, length, value);
+	if (CAN_Transmit(send_id, CAN_Id_Extended, CAN_RTR_Data, length, value) == CAN_TxStatus_NoMailBox)
+		CAN_Node_Led_blink(CAN_Node_Led_Error, 4);
 }
 
 void CAN_Node_CAN_send_data(uint8_t channel_id, uint8_t index, uint8_t length, uint8_t* value)
