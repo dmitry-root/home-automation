@@ -45,6 +45,12 @@ void proto_write(uint8_t channel_id, uint8_t address, uint8_t length, const uint
 
 	(void)channel_id;
 
+	if (address == (HA_CAN_Node_ChannelSaveConfig & 0xff))
+	{
+		CAN_Node_save_modules();
+		return;
+	}
+
 	if (address < Function0 || address >= Function0 + CAN_Node_ChannelCount || length != 1)
 		return;
 
@@ -53,7 +59,6 @@ void proto_write(uint8_t channel_id, uint8_t address, uint8_t length, const uint
 		return;
 
 	CAN_Node_set_channel(address - Function0, function_id);
-	CAN_Node_save_modules();
 }
 
 static

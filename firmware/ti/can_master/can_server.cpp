@@ -97,6 +97,8 @@ void CanServer::run()
 			if (clients_[i].valid() && NDK_FD_ISSET(clients_[i].fd, &rdset))
 				handle_client(i);
 		}
+
+		handle_signal();
 	}
 	task_handle_ = 0;
 	util::Pin(EK_TM4C1294XL_D2).toggle();
@@ -178,7 +180,7 @@ void CanServer::handle_client(size_t client_index)
 		{
 			struct ::timeval ts = { 0, 10000 };
 			bool got_packet = false;
-			for (int i = 0; i < 10; i++)
+			for (int i = 0; i < 100; i++)
 			{
 				fdSelect(0, 0, 0, 0, &ts);
 				if (CanMaster::instance().receive_response(packet))
@@ -190,18 +192,23 @@ void CanServer::handle_client(size_t client_index)
 			if (got_packet)
 			{
 				handle_can_packet(packet);
-				return;
 			}
 			else
 			{
 				CanMaster::instance().clear_request();
-				static const char timeout[] = "Timeout while waiting reply.\r\n> ";
-				send_to_client(client_index, timeout);
+				if (client.interactive)
+				{
+					static const char timeout[] = "Timeout while waiting reply.\r\n> ";
+					send_to_client(client_index, timeout);
+				}
 			}
+			return;
 		}
 	}
 	else
+	{
 		result = CanMaster::instance().send(packet);
+	}
 
 	if (client.interactive)
 	{
@@ -214,6 +221,10 @@ void CanServer::handle_client(size_t client_index)
 
 bool CanServer::parse_packet(const char* message, CanPacket& packet, bool& request)
 {
+	static const char dev_q[] = "dev-q";
+	if (::strncmp(message, dev_q, ::strlen(dev_q)) == 0)
+		return parse_dev_id_packet(message, packet, request);
+
 	unsigned int dev_id = 0, address = 0;
 	if (::sscanf(message, "dev:%x", &dev_id) != 1 || dev_id > 0xff)
 		return false;
@@ -222,8 +233,10 @@ bool CanServer::parse_packet(const char* message, CanPacket& packet, bool& reque
 	if (ptr == 0 || ::sscanf(ptr, "addr:%x", &address) != 1 || address > 0xffff)
 		return false;
 
-	packet.id.device_id = dev_id;
-	packet.id.address = address;
+	HA_CAN_PacketId packet_id = {0};
+	packet_id.device_id = dev_id;
+	packet_id.address = address;
+	packet.id = HA_CAN_packet_id_to_number(&packet_id);
 
 	request = ::strchr(ptr, '?') != 0;
 	if (request)
@@ -249,9 +262,37 @@ bool CanServer::parse_packet(const char* message, CanPacket& packet, bool& reque
 	return true;
 }
 
+bool CanServer::parse_dev_id_packet(const char* message, CanPacket& packet, bool& request)
+{
+	packet.id = HA_CAN_SpecialId_Update;
+
+	static const char dev_q[] = "dev-q?";
+	if (::strncmp(message, dev_q, strlen(dev_q)) == 0)
+	{
+		request = true;
+		return true;
+	}
+
+	unsigned int dev_id = 0;
+	if (::sscanf(message, "dev-q!%x", &dev_id) == 1 && dev_id <= 0x7f)
+	{
+		packet.data[0] = dev_id;
+		packet.length = 1;
+		return true;
+	}
+
+	return false;
+}
+
 void CanServer::handle_can_packet(const CanPacket& packet)
 {
-	::sprintf(message_, "dev:%.2x  addr:%.4x  =", (unsigned)packet.id.device_id, (unsigned)packet.id.address);
+	HA_CAN_PacketId packet_id = {0};
+	HA_CAN_number_to_packet_id(packet.id, &packet_id);
+
+	if (packet.id == HA_CAN_SpecialId_Update)
+		::strcpy(message_, "=");
+	else
+		::sprintf(message_, "dev:%.2x  addr:%.4x  =", (unsigned)packet_id.device_id, (unsigned)packet_id.address);
 	size_t pos = ::strlen(message_);
 
 	for (size_t i = 0; i < packet.length; ++i)

@@ -14,10 +14,8 @@ CAN_InitStatus_TypeDef CAN_Node_CAN_init(void)
 {
 	CAN_InitStatus_TypeDef status;
 	const uint8_t device_id = get_device_id();
-	uint8_t fr[4], fm[4];
-	HA_CAN_PacketId pid = {0};
-	HA_CAN_PacketId pid_mask = {0};
-	uint32_t address, mask;
+	const uint8_t dev_hi = ((device_id >> 5) & 0x03) | 0 /* reserved */;
+	const uint8_t dev_lo = ((device_id << 3) & 0xe0) | ((device_id << 1) & 6) | 0 /* IDE */;
 
 	CAN_DeInit();
 
@@ -34,31 +32,16 @@ CAN_InitStatus_TypeDef CAN_Node_CAN_init(void)
 		return status;
 
 	/* create packet filter */
-	pid.device_id = device_id;
-	pid.reserved = 1;
-	pid_mask.device_id = 0x7f;
-	pid_mask.reserved = 1;
-	address = HA_CAN_packet_id_to_number(&pid);
-	mask = HA_CAN_packet_id_to_number(&pid_mask);
 
-	fr[0] = (uint8_t)(address >> 21);
-	fm[0] = (uint8_t)(mask >> 21);
-	fr[1] = ((uint8_t)(address >> 13) & 0xe0) | 0x80 /* IDE */ | ((uint8_t)(address >> 15) & 0x5);
-	fm[1] = ((uint8_t)(mask    >> 13) & 0xe0) | 0x80 /* IDE */ | ((uint8_t)(mask    >> 15) & 0x5);
-	fr[2] = (uint8_t)(address >> 7);
-	fm[2] = (uint8_t)(mask    >> 7);
-	fr[3] = (uint8_t)(address << 1);
-	fm[3] = (uint8_t)(mask    << 1);
-/*
 	CAN_FilterInit(
 		CAN_FilterNumber_0,
 		ENABLE,
 		CAN_FilterMode_IdMask,
-		CAN_FilterScale_32Bit,
-		fr[0], fr[1], fr[2], fr[3],
-		fm[0], fm[1], fm[2], fm[3]);
-*/
+		CAN_FilterScale_16Bit,
+		dev_hi, dev_lo, 0xff, 0xef,
+		0x03  , 0xe6  , 0xff, 0xef);
 
+/*
 	CAN_FilterInit(
 		CAN_FilterNumber_0,
 		ENABLE,
@@ -66,28 +49,18 @@ CAN_InitStatus_TypeDef CAN_Node_CAN_init(void)
 		CAN_FilterScale_32Bit,
 		0, 0, 0, 0,
 		0, 0, 0, 0);
-
-	/* Filter for special packet id */
-
-	CAN_FilterInit(
-		CAN_FilterNumber_1,
-		ENABLE,
-		CAN_FilterMode_IdMask,
-		CAN_FilterScale_32Bit,
-		0xff, 0xef /* RTR = 0 */, 0xff, 0xfe,
-		0xff, 0xff, 0xff, 0xfe);
-
-	//CAN_ITConfig(CAN_IT_FMP, ENABLE);
+*/
 
 	return status;
 }
 
+static uint32_t received_id;
 static HA_CAN_PacketId packet_id;
 
 static void handle_received_data(void)
 {
-	uint32_t received_id;
-	uint8_t rtr, len, i, device_id;
+	uint8_t rtr, len, i;
+	uint8_t device_id = CAN_Node_Sysinfo_get_device_id();
 	uint8_t data[8] = {0};
 
 	if (CAN_GetReceivedIDE() != CAN_Id_Extended)
@@ -109,20 +82,18 @@ static void handle_received_data(void)
 	if (received_id == HA_CAN_SpecialId_Update)
 	{
 		if (rtr)
-		{
-			device_id = CAN_Node_Sysinfo_get_device_id();
 			CAN_Node_CAN_send_reply(1, &device_id);
-		}
 		else if (len == 1)
-		{
 			CAN_Node_Sysinfo_set_device_id(data[0]);
-		}
 
 		return;
 	}
 
-	//CAN_Node_handle_packet(rtr, &packet_id, len, data); -- TODO uncomment
-	CAN_Node_CAN_send_reply(len, data);
+	if (device_id != packet_id.device_id)
+		return;
+
+	CAN_Node_handle_packet(rtr, &packet_id, len, data);
+	//CAN_Node_CAN_send_reply(len, data);
 }
 
 void CAN_Node_CAN_handle_packets(void)
@@ -138,11 +109,7 @@ void CAN_Node_CAN_handle_packets(void)
 
 void CAN_Node_CAN_send_reply(uint8_t length, uint8_t* value)
 {
-	uint32_t send_id;
-
-	send_id = HA_CAN_packet_id_to_number(&packet_id);
-
-	if (CAN_Transmit(send_id, CAN_Id_Extended, CAN_RTR_Data, length, value) == CAN_TxStatus_NoMailBox)
+	if (CAN_Transmit(received_id, CAN_Id_Extended, CAN_RTR_Data, length, value) == CAN_TxStatus_NoMailBox)
 		CAN_Node_Led_blink(CAN_Node_Led_Error, 4);
 }
 

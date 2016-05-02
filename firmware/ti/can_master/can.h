@@ -9,7 +9,7 @@
 
 struct CanPacket
 {
-	HA_CAN_PacketId id = {0};
+	uint32_t id = 0;
 	uint8_t data[8] = {0};
 	size_t length = 0;
 };
@@ -24,7 +24,7 @@ public:
 	bool send(const CanPacket& packet);
 	bool receive(CanPacket& packet);
 
-	bool send_request(const HA_CAN_PacketId& packet_id);
+	bool send_request(uint32_t packet_id);
 	bool receive_response(CanPacket& packet);
 	void clear_request();
 

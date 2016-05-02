@@ -141,14 +141,12 @@ bool CanMaster::do_send(uint32_t msg_id, const uint8_t* data, size_t length, boo
 
 bool CanMaster::send(const CanPacket& packet)
 {
-	const uint32_t msg_id = HA_CAN_packet_id_to_number(&packet.id);
-	return do_send(msg_id, packet.data, packet.length, false);
+	return do_send(packet.id, packet.data, packet.length, false);
 }
 
-bool CanMaster::send_request(const HA_CAN_PacketId& packet_id)
+bool CanMaster::send_request(uint32_t packet_id)
 {
-	const uint32_t msg_id = HA_CAN_packet_id_to_number(&packet_id);
-	return do_send(msg_id, 0, 0, true);
+	return do_send(packet_id, 0, 0, true);
 }
 
 bool CanMaster::receive(CanPacket& packet)
@@ -180,7 +178,7 @@ bool CanMaster::receive(CanPacket& packet)
 		return false;
 
 	packet.length = object.ui32MsgLen;
-	HA_CAN_number_to_packet_id(object.ui32MsgID, &packet.id);
+	packet.id = object.ui32MsgID;
 
 	return true;
 }
@@ -191,7 +189,7 @@ bool CanMaster::receive_response(CanPacket& packet)
 	object.pui8MsgData = packet.data;
 	object.ui32MsgLen = MsgLen;
 	CANMessageGet(CAN0_BASE, TxRxRemote + 1, &object, true);
-	if ((object.ui32Flags & MSG_OBJ_NEW_DATA) != 0)
+	if ((object.ui32Flags & MSG_OBJ_NEW_DATA) == 0)
 		return false;
 
 	CANMessageClear(CAN0_BASE, TxRxRemote + 1);
@@ -200,10 +198,11 @@ bool CanMaster::receive_response(CanPacket& packet)
 		return false;
 
 	packet.length = object.ui32MsgLen;
-	HA_CAN_number_to_packet_id(object.ui32MsgID, &packet.id);
+	packet.id = object.ui32MsgID;
 	return true;
 }
 
 void CanMaster::clear_request()
 {
+	CANMessageClear(CAN0_BASE, TxRxRemote + 1);
 }

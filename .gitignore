@@ -38,3 +38,9 @@
 /output
 /schematics/gerber
 /schematics/zip
+
+/*.config
+*.creator
+*.creator.user
+*.files
+*.includes

@@ -31,6 +31,7 @@ enum HA_CAN_NodeMap
 {
 	/* == 0x01xx: device configuration */
 	HA_CAN_Node_ChannelCount = 0x0100,       /*!< R/O count of available channels, 1 byte */
+	HA_CAN_Node_ChannelSaveConfig = 0x0101,  /*!< W/O save device configuration */
 	HA_CAN_Node_ChannelFunction0 = 0x0102    /*!< R/W function number field for each channel, 1 byte */
 };
 
@@ -51,11 +52,15 @@ uint16_t HA_CAN_Node_field_address(uint8_t channel_id, uint8_t field)
 /** Channel functions */
 enum HA_CAN_Node_Function
 {
+	/* General-purpose functions */
 	HA_CAN_Node_Function_None,              /*!< No function, default */
 	HA_CAN_Node_Function_Switch,            /*!< Digital switch, i.e. GPIO output */
 	HA_CAN_Node_Function_Button,            /*!< Digital button, i.e. GPIO input (with locking and interrupt signalling) */
 	HA_CAN_Node_Function_Analog,            /*!< ADC sensor */
 	HA_CAN_Node_Function_PWM,               /*!< PWM output */
+
+	/* Special device functions */
+	HA_CAN_Node_Function_DS18B20,           /*!< 1-Wire Thermometer */
 
 	HA_CAN_Node_FunctionCount
 };
@@ -64,7 +69,9 @@ enum HA_CAN_Node_Function
 enum HA_CAN_Node_SwitchConfig
 {
 	HA_CAN_Node_SwitchConfig_Polarity = 0x01,
-	HA_CAN_Node_SwitchConfig_DefaultOn = 0x02
+	HA_CAN_Node_SwitchConfig_DefaultOn = 0x02,
+
+	HA_CAN_Node_SwitchConfigMask = 0x03
 };
 
 /** Switch fields */
@@ -77,7 +84,7 @@ enum HA_CAN_Node_SwitchFields
 
 enum HA_CAN_Node_ButtonConfig
 {
-	HA_CAN_Node_ButtonConfig_ReversePolarity = 0x01,  /*!< Reverse polarity, i.e. tread 1 as 0 and vice versa */
+	HA_CAN_Node_ButtonConfig_Polarity = 0x01,         /*!< Reverse polarity, i.e. treat 1 as 0 and vice versa */
 	HA_CAN_Node_ButtonConfig_PullUp = 0x02,           /*!< Turn on pull up resistor */
 	HA_CAN_Node_ButtonConfig_PullDown = 0x04,         /*!< Turn on pull down resistor */
 	HA_CAN_Node_ButtonConfig_Lock = 0x08,             /*!< Lock button value in memory until it's read (0: always report current state) */
@@ -105,6 +112,13 @@ enum HA_CAN_Node_AnalogFields
 	HA_CAN_Node_Analog_RangeMin,            /*!< Range left bound, 2 bytes, R/W */
 	HA_CAN_Node_Analog_RangeMax,            /*!< Range upper bound, 2 bytes, R/W */
 	HA_CAN_Node_Analog_Value                /*!< Current value of analog input, 2 bytes, R/O */
+};
+
+
+enum HA_CAN_Node_DS18B20
+{
+	/* NOTE It may take up to 1 second to get a reply. */
+	HA_CAN_Node_DS18B20_Temperature         /*!< Convert and read temperature. R/O, 2 bytes. Temperature is returned in DS18B20 internal format. 0xffff means no PD. */
 };
 
 #ifdef __cplusplus

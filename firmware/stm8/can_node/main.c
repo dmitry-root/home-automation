@@ -8,7 +8,10 @@
 #include "can.h"
 
 #include "sysinfo.h"
+#include "ha/can_node.h"
 #include "mod_proto.h"
+#include "mod_switch.h"
+#include "mod_ds18b20.h"
 
 
 static void configure_clock(void);
@@ -24,11 +27,11 @@ void main()
 	configure_unused_gpio();
 	register_modules();
 
+	CAN_Node_load_modules();
 	CAN_Node_Led_init_all();
 	if (CAN_Node_CAN_init() != CAN_InitStatus_Success)
 		CAN_Node_Led_switch(CAN_Node_Led_Error, ENABLE);
 	CAN_Node_Clock_init();
-	CAN_Node_load_modules();
 
 	CAN_Node_Led_blink(CAN_Node_Led_Info, 10);
 
@@ -90,4 +93,6 @@ void register_modules(void)
 {
 	CAN_Node_register_sysinfo_module( CAN_Node_Sysinfo_get_module() );
 	CAN_Node_register_proto_module( CAN_Node_mod_proto() );
+	CAN_Node_register_function_module(HA_CAN_Node_Function_Switch, CAN_Node_mod_switch());
+	CAN_Node_register_function_module(HA_CAN_Node_Function_DS18B20, CAN_Node_mod_ds18b20());
 }

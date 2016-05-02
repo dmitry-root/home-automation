@@ -10,6 +10,9 @@ SOURCES := \
 	can.c \
 	clock.c \
 	sysinfo.c \
-	mod_proto.c
+	onewire.c \
+	mod_proto.c \
+	mod_switch.c \
+	mod_ds18b20.c
 
 include ../build/makedefs
