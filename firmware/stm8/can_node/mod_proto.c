@@ -17,8 +17,6 @@ void proto_deinit(uint8_t channel_id)
 	(void)channel_id;
 }
 
-enum { Function0 = HA_CAN_Node_ChannelFunction0 & 0xff };
-
 static
 void proto_request(uint8_t channel_id, uint8_t address)
 {
@@ -26,14 +24,14 @@ void proto_request(uint8_t channel_id, uint8_t address)
 
 	(void)channel_id;
 
-	if (address == (HA_CAN_Node_ChannelCount & 0xff))
+	if (address == HA_CAN_Node_ChannelCount)
 	{
 		reply = CAN_Node_ChannelCount;
 		CAN_Node_CAN_send_reply(1, &reply);
 	}
-	else if (address >= Function0 && address < Function0 + CAN_Node_ChannelCount)
+	else if (address >= HA_CAN_Node_ChannelFunction0 && address < HA_CAN_Node_ChannelFunction0 + CAN_Node_ChannelCount)
 	{
-		reply = CAN_Node_get_channel(address - Function0);
+		reply = CAN_Node_get_channel(address - HA_CAN_Node_ChannelFunction0);
 		CAN_Node_CAN_send_reply(1, &reply);
 	}
 }
@@ -45,20 +43,20 @@ void proto_write(uint8_t channel_id, uint8_t address, uint8_t length, const uint
 
 	(void)channel_id;
 
-	if (address == (HA_CAN_Node_ChannelSaveConfig & 0xff))
+	if (address == HA_CAN_Node_ChannelSaveConfig)
 	{
 		CAN_Node_save_modules();
 		return;
 	}
 
-	if (address < Function0 || address >= Function0 + CAN_Node_ChannelCount || length != 1)
+	if (address < HA_CAN_Node_ChannelFunction0 || address >= HA_CAN_Node_ChannelFunction0 + CAN_Node_ChannelCount || length != 1)
 		return;
 
 	function_id = value[0];
 	if (function_id >= HA_CAN_Node_FunctionCount)
 		return;
 
-	CAN_Node_set_channel(address - Function0, function_id);
+	CAN_Node_set_channel(address - HA_CAN_Node_ChannelFunction0, function_id);
 }
 
 static

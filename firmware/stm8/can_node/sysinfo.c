@@ -9,15 +9,20 @@
 
 /* === sysinfo module functions === */
 
-static uint8_t device_id = 0;
+static uint8_t device_id = 0xff;
+static uint8_t label[8] = {0};
 
 #define SERIAL_NO ((volatile uint8_t*)0x48CD)
 
-enum
+static
+uint8_t label_length()
 {
-	DeviceRevision_Hi = 1,
-	DeviceRevision_Lo = 1
-};
+	uint8_t i;
+	for (i = 0; i < sizeof(label); ++i)
+		if (label[i] == 0)
+			return i;
+	return sizeof(label);
+}
 
 static
 void sysinfo_init(uint8_t channel_id)
@@ -48,9 +53,9 @@ void sysinfo_request(uint8_t channel_id, uint8_t address)
 			CAN_Node_CAN_send_reply(4, reply);
 			break;
 
-		case HA_CAN_Common_DeviceRevision:
-			reply[0] = DeviceRevision_Hi;
-			reply[1] = DeviceRevision_Lo;
+		case HA_CAN_Common_FirmwareVersion:
+			reply[0] = 0;
+			reply[1] = HA_CAN_Node_Version_Current;
 			CAN_Node_CAN_send_reply(2, reply);
 			break;
 
@@ -74,33 +79,49 @@ void sysinfo_request(uint8_t channel_id, uint8_t address)
 			reply[7] = *(SERIAL_NO + 0);
 			CAN_Node_CAN_send_reply(8, reply);
 			break;
+
+		case HA_CAN_Common_DeviceLabel:
+			CAN_Node_CAN_send_reply(label_length(), label);
+			break;
 	}
 }
 
 static
 void sysinfo_write(uint8_t channel_id, uint8_t address, uint8_t length, const uint8_t* value)
 {
-	/* all values are read-only */
+	uint8_t i;
 	(void)channel_id;
-	(void)address;
-	(void)length;
-	(void)value;
+
+	switch (address)
+	{
+		case HA_CAN_Common_DeviceLabel:
+			for (i = 0; i < sizeof(label); ++i)
+				label[i] = (i < length) ? value[i] : 0;
+			CAN_Node_save_modules();
+			break;
+	}
 }
 
 static
 void sysinfo_save(uint8_t channel_id, CAN_Node_EEStream* stream)
 {
+	uint8_t i;
 	(void)channel_id;
 
 	CAN_Node_EEStream_write_byte(stream, device_id);
+	for (i = 0; i < sizeof(label); ++i)
+		CAN_Node_EEStream_write_byte(stream, label[i]);
 }
 
 static
 void sysinfo_load(uint8_t channel_id, CAN_Node_EEStream* stream)
 {
+	uint8_t i;
 	(void)channel_id;
 
 	device_id = CAN_Node_EEStream_read_byte(stream);
+	for (i = 0; i < sizeof(label); ++i)
+		label[i] = CAN_Node_EEStream_read_byte(stream);
 }
 
 

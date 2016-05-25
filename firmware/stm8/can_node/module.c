@@ -86,9 +86,12 @@ void CAN_Node_handle_packet(uint8_t rtr, HA_CAN_PacketId* packet_id, uint8_t len
 			break;
 
 		default:
-			module_index -= 2;
-			if (module_index < CAN_Node_ChannelCount)
-				module = channel_modules[module_index];
+			if (module_index >= 0x80)
+			{
+				module_index &= 0x7f;
+				if (module_index < CAN_Node_ChannelCount)
+					module = channel_modules[module_index];
+			}
 			break;
 	}
 

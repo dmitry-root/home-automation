@@ -83,8 +83,8 @@ static void handle_received_data(void)
 	{
 		if (rtr)
 			CAN_Node_CAN_send_reply(1, &device_id);
-		else if (len == 1)
-			CAN_Node_Sysinfo_set_device_id(data[0]);
+		else if (len == 2 && data[0] == device_id)
+			CAN_Node_Sysinfo_set_device_id(data[1]);
 
 		return;
 	}

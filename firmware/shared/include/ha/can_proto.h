@@ -52,8 +52,9 @@ extern "C" {
  *
  * The special 28'th bit has special meaning. It's used to setup a new device into the network.
  * The device must be the only one connected to the network. All other bits of packet ID must
- * be set to 1. The RTR bit is set to 0, and packet data contains 1 byte with value in range
- * 0-127. The value of that byte sets a new device id for the device being programmed.
+ * be set to 1. The RTR bit is set to 0, and packet data contains 2 bytes of data. The first
+ * byte is the old device id (brand new devices have default id of 0xff), and the second byte
+ * is a new device id to set.
  *
  * The device must implement a special hardware-specific check to verify that this command is allowed.
  * For example, some special button may be pressed, or a jumper is set, etc. If it's not possible,
@@ -107,11 +108,12 @@ static const uint32_t HA_CAN_ReservedMask = ((uint32_t)1u << 23) | ((uint32_t)1u
  */
 enum HA_CAN_CommonMap
 {
-	/* == Device information, 0x00 .. 0x0f. Read only. == */
+	/* == Device information, 0x00 .. 0x0f. Read only unless otherwise specified. == */
 	HA_CAN_Common_DeviceType = 0x00,        /*!< Type of the device, 4 bytes (hi word: vendor id, lo word: device id) */
-	HA_CAN_Common_DeviceRevision = 0x01,    /*!< Revision number, 2 bytes */
+	HA_CAN_Common_FirmwareVersion = 0x01,   /*!< Firmware version number, 2 bytes */
 	HA_CAN_Common_SerialHi = 0x02,          /*!< Hi part of 128-bit serial, 8 bytes */
 	HA_CAN_Common_SerialLo = 0x03,          /*!< Lo part of 128-bit serial, 8 bytes */
+	HA_CAN_Common_DeviceLabel = 0x04        /*!< R/W user-specified label string, 0-8 bytes. May be not supported by some devices */
 };
 
 

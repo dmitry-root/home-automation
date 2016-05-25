@@ -9,6 +9,19 @@ extern "C" {
 
 
 /**
+ * Device protocol version features.
+ */
+enum HA_CAN_Node_Versions
+{
+	HA_CAN_Node_Version_Initial = 0,        /*!< Support of Switch and Button functions */
+	HA_CAN_Node_Version_DS18B20,            /*!< Support of 1-wire DS18B20 sensor */
+	/* ... add new lines here ... */
+
+	HA_CAN_Node_VersionCount,
+	HA_CAN_Node_Version_Current = HA_CAN_Node_VersionCount - 1
+};
+
+/**
  * Device information for CAN NODE devices.
  */
 enum HA_CAN_NodeInfo
@@ -24,15 +37,17 @@ enum HA_CAN_NodeInfo
  * The 16-bit virtual address space has the following form:
  *   - 0x00xx   -- this range is reserved for protocol-specific information (can_proto.h)
  *   - 0x01xx   -- CAN NODE-specific static information
- *   - 0xccxx   -- channel-specific information. cc is (channel number + 2), xx is channel-specific address.
+ *   - 0xccxx   -- channel-specific information. cc is (channel number + 0x80), xx is channel-specific address.
  *
+ * Below is the codes for 0x01xx commands.
  */
 enum HA_CAN_NodeMap
 {
 	/* == 0x01xx: device configuration */
-	HA_CAN_Node_ChannelCount = 0x0100,       /*!< R/O count of available channels, 1 byte */
-	HA_CAN_Node_ChannelSaveConfig = 0x0101,  /*!< W/O save device configuration */
-	HA_CAN_Node_ChannelFunction0 = 0x0102    /*!< R/W function number field for each channel, 1 byte */
+	HA_CAN_Node_ChannelSaveConfig = 0x00,    /*!< W/O save device configuration */
+	HA_CAN_Node_ChannelCount = 0x01,         /*!< R/O count of available channels, 1 byte */
+
+	HA_CAN_Node_ChannelFunction0 = 0x80      /*!< R/W function number field for each channel, 1 byte */
 };
 
 
@@ -45,7 +60,7 @@ uint16_t HA_CAN_Node_function_address(uint8_t channel_id)
 static inline
 uint16_t HA_CAN_Node_field_address(uint8_t channel_id, uint8_t field)
 {
-	return ((uint16_t)(channel_id + 2) << 8) | field;
+	return ((uint16_t)(channel_id + 0x80) << 8) | field;
 }
 
 

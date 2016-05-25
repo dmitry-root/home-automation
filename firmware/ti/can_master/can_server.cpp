@@ -273,11 +273,12 @@ bool CanServer::parse_dev_id_packet(const char* message, CanPacket& packet, bool
 		return true;
 	}
 
-	unsigned int dev_id = 0;
-	if (::sscanf(message, "dev-q!%x", &dev_id) == 1 && dev_id <= 0x7f)
+	unsigned int value = 0;
+	if (::sscanf(message, "dev-q!%x", &value) == 1 && value <= 0xffff && (value & 0xff) <= 0x7f)
 	{
-		packet.data[0] = dev_id;
-		packet.length = 1;
+		packet.data[0] = (value >> 8) & 0xff;
+		packet.data[1] = value & 0xff;
+		packet.length = 2;
 		return true;
 	}
 
