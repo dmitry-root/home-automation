@@ -11,6 +11,7 @@
 #include "ha/can_node.h"
 #include "mod_proto.h"
 #include "mod_switch.h"
+#include "mod_button.h"
 #include "mod_ds18b20.h"
 
 
@@ -94,5 +95,6 @@ void register_modules(void)
 	CAN_Node_register_sysinfo_module( CAN_Node_Sysinfo_get_module() );
 	CAN_Node_register_proto_module( CAN_Node_mod_proto() );
 	CAN_Node_register_function_module(HA_CAN_Node_Function_Switch, CAN_Node_mod_switch());
+	CAN_Node_register_function_module(HA_CAN_Node_Function_Button, CAN_Node_mod_button());
 	CAN_Node_register_function_module(HA_CAN_Node_Function_DS18B20, CAN_Node_mod_ds18b20());
 }

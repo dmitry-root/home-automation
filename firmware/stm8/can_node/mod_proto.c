@@ -18,22 +18,22 @@ void proto_deinit(uint8_t channel_id)
 }
 
 static
-void proto_request(uint8_t channel_id, uint8_t address)
+uint8_t proto_request(uint8_t channel_id, uint8_t address, uint8_t* reply)
 {
-	uint8_t reply;
-
 	(void)channel_id;
 
 	if (address == HA_CAN_Node_ChannelCount)
 	{
-		reply = CAN_Node_ChannelCount;
-		CAN_Node_CAN_send_reply(1, &reply);
+		*reply = CAN_Node_ChannelCount;
+		return 1;
 	}
 	else if (address >= HA_CAN_Node_ChannelFunction0 && address < HA_CAN_Node_ChannelFunction0 + CAN_Node_ChannelCount)
 	{
-		reply = CAN_Node_get_channel(address - HA_CAN_Node_ChannelFunction0);
-		CAN_Node_CAN_send_reply(1, &reply);
+		*reply = CAN_Node_get_channel(address - HA_CAN_Node_ChannelFunction0);
+		return 1;
 	}
+
+	return NO_RESPONSE;
 }
 
 static

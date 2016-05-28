@@ -68,24 +68,20 @@ uint8_t read_temp(uint8_t temp[2])
 }
 
 static
-void ds18b20_request(uint8_t channel_id, uint8_t address)
+uint8_t ds18b20_request(uint8_t channel_id, uint8_t address, uint8_t* reply)
 {
-	uint8_t reply_count = 0;
-	uint8_t reply[8];
-
 	(void)channel_id;
 
 	if (address != HA_CAN_Node_DS18B20_Temperature)
-		return;
+		return NO_RESPONSE;
 
-	reply_count = 2;
 	if (!read_temp(reply))
 	{
 		reply[0] = 0xff;
 		reply[1] = 0xff;
 	}
 
-	CAN_Node_CAN_send_reply(reply_count, reply);
+	return 2;
 }
 
 static

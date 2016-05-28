@@ -1,6 +1,7 @@
 #include "module.h"
 #include "ha/can_node.h"
 #include "ha/can_proto.h"
+#include "can.h"
 
 #include "stm8s.h"
 #include "stm8s_can.h"
@@ -64,6 +65,8 @@ void CAN_Node_handle_packet(uint8_t rtr, HA_CAN_PacketId* packet_id, uint8_t len
 {
 	uint8_t module_index, address_lo;
 	CAN_Node_Module* module = NULL;
+	uint8_t response[8];
+	uint8_t size;
 
 	/**
 	 * We assume here that device_id field is correct in this packet. This is because the CAN engine has a
@@ -101,7 +104,11 @@ void CAN_Node_handle_packet(uint8_t rtr, HA_CAN_PacketId* packet_id, uint8_t len
 	if (rtr == CAN_RTR_Data)
 		module->on_write(module_index, address_lo, length, data);
 	else
-		module->on_request(module_index, address_lo);
+	{
+		size = module->on_request(module_index, address_lo, response);
+		if (size <= 8)
+			CAN_Node_CAN_send_reply(size, response);
+	}
 }
 
 

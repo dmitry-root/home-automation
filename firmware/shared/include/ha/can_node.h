@@ -101,9 +101,10 @@ enum HA_CAN_Node_ButtonConfig
 {
 	HA_CAN_Node_ButtonConfig_Polarity = 0x01,         /*!< Reverse polarity, i.e. treat 1 as 0 and vice versa */
 	HA_CAN_Node_ButtonConfig_PullUp = 0x02,           /*!< Turn on pull up resistor */
-	HA_CAN_Node_ButtonConfig_PullDown = 0x04,         /*!< Turn on pull down resistor */
-	HA_CAN_Node_ButtonConfig_Lock = 0x08,             /*!< Lock button value in memory until it's read (0: always report current state) */
-	HA_CAN_Node_ButtonConfig_Active = 0x10            /*!< Send button value when it's equal to 1 without user poll request */
+	HA_CAN_Node_ButtonConfig_Lock = 0x04,             /*!< Lock button value in memory until it's read (0: always report current state) */
+	HA_CAN_Node_ButtonConfig_Active = 0x08,           /*!< Send button value when it's equal to 1 without user poll request */
+
+	HA_CAN_Node_ButtonConfigMask = 0x0f
 };
 
 /** Button fields */

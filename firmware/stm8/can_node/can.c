@@ -121,7 +121,7 @@ void CAN_Node_CAN_send_data(uint8_t channel_id, uint8_t index, uint8_t length, u
 	packet_id.priority = 0; /* TODO */
 	packet_id.reserved = 1;
 	packet_id.device_id = get_device_id();
-	packet_id.address = (((uint16_t)channel_id + 2) << 8) | index;
+	packet_id.address = (((uint16_t)channel_id | 0x80) << 8) | index;
 
 	send_id = HA_CAN_packet_id_to_number(&packet_id);
 	CAN_Transmit(send_id, CAN_Id_Extended, CAN_RTR_Data, length, value);

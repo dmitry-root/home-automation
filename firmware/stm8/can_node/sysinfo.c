@@ -37,10 +37,8 @@ void sysinfo_deinit(uint8_t channel_id)
 }
 
 static
-void sysinfo_request(uint8_t channel_id, uint8_t address)
+uint8_t sysinfo_request(uint8_t channel_id, uint8_t address, uint8_t* reply)
 {
-	uint8_t reply[8];
-
 	(void)channel_id;
 
 	switch (address)
@@ -50,14 +48,12 @@ void sysinfo_request(uint8_t channel_id, uint8_t address)
 			reply[1] = (HA_CAN_NodeInfo_DeviceType >> 16) & 0xff;
 			reply[2] = (HA_CAN_NodeInfo_DeviceType >> 8) & 0xff;
 			reply[3] = HA_CAN_NodeInfo_DeviceType & 0xff;
-			CAN_Node_CAN_send_reply(4, reply);
-			break;
+			return 4;
 
 		case HA_CAN_Common_FirmwareVersion:
 			reply[0] = 0;
 			reply[1] = HA_CAN_Node_Version_Current;
-			CAN_Node_CAN_send_reply(2, reply);
-			break;
+			return 2;
 
 		case HA_CAN_Common_SerialHi:
 			reply[0] = reply[1] = reply[2] = reply[3] = 0;
@@ -65,8 +61,7 @@ void sysinfo_request(uint8_t channel_id, uint8_t address)
 			reply[5] = *(SERIAL_NO + 10);
 			reply[6] = *(SERIAL_NO + 9);
 			reply[7] = *(SERIAL_NO + 8);
-			CAN_Node_CAN_send_reply(8, reply);
-			break;
+			return 8;
 
 		case HA_CAN_Common_SerialLo:
 			reply[0] = *(SERIAL_NO + 7);
@@ -77,12 +72,14 @@ void sysinfo_request(uint8_t channel_id, uint8_t address)
 			reply[5] = *(SERIAL_NO + 2);
 			reply[6] = *(SERIAL_NO + 1);
 			reply[7] = *(SERIAL_NO + 0);
-			CAN_Node_CAN_send_reply(8, reply);
-			break;
+			return 8;
 
 		case HA_CAN_Common_DeviceLabel:
 			CAN_Node_CAN_send_reply(label_length(), label);
-			break;
+			/* fall through */
+
+		default:
+			return NO_RESPONSE;
 	}
 }
 

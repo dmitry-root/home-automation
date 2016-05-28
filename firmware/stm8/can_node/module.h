@@ -19,7 +19,7 @@ typedef struct CAN_Node_Module_s
 	void (* on_deinit)(uint8_t channel_id);
 
 	/** Request a value with specified (low part) address */
-	void (* on_request)(uint8_t channel_id, uint8_t address);
+	uint8_t (* on_request)(uint8_t channel_id, uint8_t address, uint8_t* response);
 
 	/** Write a value at specified (low part) address */
 	void (* on_write)(uint8_t channel_id, uint8_t address, uint8_t length, const uint8_t* value);
@@ -34,6 +34,10 @@ typedef struct CAN_Node_Module_s
 	void (* on_load)(uint8_t channel_id, CAN_Node_EEStream* stream);
 } CAN_Node_Module;
 
+enum
+{
+	NO_RESPONSE = 255
+};
 
 enum
 {

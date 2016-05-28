@@ -75,26 +75,20 @@ void switch_update(uint8_t channel_id)
 }
 
 static
-void switch_request(uint8_t channel_id, uint8_t address)
+uint8_t switch_request(uint8_t channel_id, uint8_t address, uint8_t* reply)
 {
-	uint8_t reply_count = 0;
-	uint8_t reply[8];
-
 	switch (address)
 	{
 		case HA_CAN_Node_Switch_Config:
-			reply_count = 1;
 			reply[0] = switches[channel_id].config;
-			break;
+			return 1;
 
 		case HA_CAN_Node_Switch_Value:
-			reply_count = 1;
 			reply[0] = switches[channel_id].mode;
-			break;
+			return 1;
 	}
 
-	if (reply_count > 0)
-		CAN_Node_CAN_send_reply(reply_count, reply);
+	return NO_RESPONSE;
 }
 
 static
@@ -120,17 +114,17 @@ static
 void switch_save(uint8_t channel_id, CAN_Node_EEStream* stream)
 {
 	CAN_Node_EEStream_write_byte(stream, switches[channel_id].config);
-	CAN_Node_EEStream_write_byte(stream, switches[channel_id].mode);
 }
 
 static
 void switch_load(uint8_t channel_id, CAN_Node_EEStream* stream)
 {
 	switches[channel_id].config = CAN_Node_EEStream_read_byte(stream);
-	switches[channel_id].mode   = CAN_Node_EEStream_read_byte(stream);
 
 	if (switches[channel_id].config & HA_CAN_Node_SwitchConfig_DefaultOn)
 		switches[channel_id].mode = SwitchMode_On;
+	else
+		switches[channel_id].mode = SwitchMode_Off;
 
 	switch_update(channel_id);
 }
