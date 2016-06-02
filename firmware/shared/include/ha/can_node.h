@@ -118,15 +118,22 @@ enum HA_CAN_Node_ButtonFields
 enum HA_CAN_Node_AnalogConfig
 {
 	HA_CAN_Node_AnalogConfig_RangeCheck = 0x01,       /*!< Check specified range and send signal to the bus when it's met */
-	HA_CAN_Node_AnalogConfig_ReverseRange = 0x02      /*!< Range check succeeds when value is out of range */
+	HA_CAN_Node_AnalogConfig_ReverseRange = 0x02,     /*!< Range check succeeds when value is out of range */
+
+	HA_CAN_Node_AnalogConfigMask = 0x03
 };
+
+typedef struct HA_CAN_Node_AnalogRange_s
+{
+	uint16_t range_min;
+	uint16_t range_max;
+} HA_CAN_Node_AnalogRange;
 
 /** Analog fields */
 enum HA_CAN_Node_AnalogFields
 {
 	HA_CAN_Node_Analog_Config,              /*!< Configuration bits, 1 byte, R/W */
-	HA_CAN_Node_Analog_RangeMin,            /*!< Range left bound, 2 bytes, R/W */
-	HA_CAN_Node_Analog_RangeMax,            /*!< Range upper bound, 2 bytes, R/W */
+	HA_CAN_Node_Analog_Range,               /*!< Range bounds, 4 bytes, R/W */
 	HA_CAN_Node_Analog_Value                /*!< Current value of analog input, 2 bytes, R/O */
 };
 

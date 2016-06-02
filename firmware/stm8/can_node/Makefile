@@ -14,6 +14,7 @@ SOURCES := \
 	mod_proto.c \
 	mod_switch.c \
 	mod_button.c \
+	mod_analog.c \
 	mod_ds18b20.c
 
 include ../build/makedefs
