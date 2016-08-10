@@ -85,15 +85,17 @@ enum HA_CAN_Node_SwitchConfig
 {
 	HA_CAN_Node_SwitchConfig_Polarity = 0x01,
 	HA_CAN_Node_SwitchConfig_DefaultOn = 0x02,
+	HA_CAN_Node_SwitchConfig_OffDelay = 0x04,
 
-	HA_CAN_Node_SwitchConfigMask = 0x03
+	HA_CAN_Node_SwitchConfigMask = 0x07
 };
 
 /** Switch fields */
 enum HA_CAN_Node_SwitchFields
 {
 	HA_CAN_Node_Switch_Config,              /*!< Configuration bits, 1 byte, R/W */
-	HA_CAN_Node_Switch_Value                /*!< Current value of the switch, 1 byte, R/W */
+	HA_CAN_Node_Switch_Value,               /*!< Current value of the switch, 1 byte, R/W */
+	HA_CAN_Node_Switch_OffDelay             /*!< Current off delay, 2 bytes, R/W */
 };
 
 
