@@ -38,6 +38,7 @@
 /output
 /schematics/gerber
 /schematics/zip
+/deephome/build
 
 /*.config
 *.creator
