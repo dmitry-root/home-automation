@@ -6,6 +6,7 @@
 #include <condition_variable>
 #include <memory>
 #include <list>
+#include <cstdint>
 
 #include <ev.h>
 
@@ -23,6 +24,8 @@ typedef std::function< void() > EventHandler;
 class EventLoop : NonCopyable
 {
 public:
+	class Connection;
+
 	EventLoop();
 	~EventLoop();
 
@@ -50,6 +53,37 @@ private:
 	struct ev_loop* loop_;
 	struct ev_async async_event_;
 	EventQueue event_queue_;
+};
+
+
+class IoListener : NonCopyable
+{
+public:
+	enum Event
+	{
+		Event_Read = 1,
+		Event_Write = 2,
+		Event_All = 3
+	};
+
+	typedef std::function< void(int, uint32_t) > HandlerProc;
+
+	IoListener(EventLoop& event_loop, int fd, const HandlerProc& callback, uint32_t events = Event_All);
+	~IoListener();
+
+	void start();
+	void stop();
+
+private:
+	static void io_handler(struct ev_loop*, struct ev_io* io, int revents);
+	void on_io(uint32_t revents);
+
+private:
+	struct ev_loop* loop_;
+	struct ev_io io_;
+	bool started_ = false;
+	const HandlerProc callback_;
+	uint32_t events_;
 };
 
 }
