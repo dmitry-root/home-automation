@@ -35,10 +35,10 @@ public:
 	void run();
 
 	// To be called inside or outside of a loop
-	void enqueue(const EventHandler& handler);
+	void enqueue(const EventHandler& handler) const;
 
 	// To be called inside of a loop
-	void unloop();
+	void unloop() const;
 
 private:
 	void main_loop();
@@ -51,13 +51,13 @@ private:
 	typedef std::list<EventHandler> EventQueue;
 
 	std::unique_ptr< std::thread > thread_;
-	std::mutex guard_;
+	mutable std::mutex guard_;
 	std::condition_variable started_;
 	bool is_started_ = false;
 
-	struct ev_loop* loop_;
-	struct ev_async async_event_;
-	EventQueue event_queue_;
+	mutable struct ev_loop* loop_;
+	mutable struct ev_async async_event_;
+	mutable EventQueue event_queue_;
 };
 
 
@@ -73,7 +73,7 @@ public:
 
 	typedef std::function< void(int, uint32_t) > HandlerProc;
 
-	IoListener(EventLoop& event_loop, int fd, const HandlerProc& callback, uint32_t events = Event_All);
+	IoListener(const EventLoop& event_loop, int fd, const HandlerProc& callback, uint32_t events = Event_All);
 	~IoListener();
 
 	void start();
@@ -95,7 +95,7 @@ private:
 class SignalListener : NonCopyable
 {
 public:
-	SignalListener(EventLoop& event_loop, int signal, const EventHandler& callback);
+	SignalListener(const EventLoop& event_loop, int signal, const EventHandler& callback);
 	~SignalListener();
 
 	void start();

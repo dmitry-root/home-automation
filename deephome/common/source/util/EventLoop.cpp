@@ -48,7 +48,7 @@ void EventLoop::run()
 	main_loop();
 }
 
-void EventLoop::enqueue(const EventHandler& handler)
+void EventLoop::enqueue(const EventHandler& handler) const
 {
 	{
 		std::unique_lock<std::mutex> lock(guard_);
@@ -92,7 +92,7 @@ void EventLoop::handle_events()
 	}
 }
 
-void EventLoop::unloop()
+void EventLoop::unloop() const
 {
 	ev_unloop(loop_, EVUNLOOP_ONE);
 }
@@ -113,7 +113,7 @@ void EventLoop::on_async_event()
 class EventLoop::Connection : NonCopyable
 {
 public:
-	static struct ev_loop* get_loop(EventLoop& event_loop)
+	static struct ev_loop* get_loop(const EventLoop& event_loop)
 	{
 		return event_loop.loop_;
 	}
@@ -125,7 +125,7 @@ private:
 
 
 
-IoListener::IoListener(EventLoop& event_loop, int fd, const HandlerProc& callback, uint32_t events) :
+IoListener::IoListener(const EventLoop& event_loop, int fd, const HandlerProc& callback, uint32_t events) :
     loop_( EventLoop::Connection::get_loop(event_loop) ),
     callback_(callback),
     events_(events)
@@ -170,7 +170,7 @@ void IoListener::on_io(uint32_t revents)
 }
 
 
-SignalListener::SignalListener(EventLoop& event_loop, int signal, const EventHandler& callback) :
+SignalListener::SignalListener(const EventLoop& event_loop, int signal, const EventHandler& callback) :
     loop_( EventLoop::Connection::get_loop(event_loop) ),
     callback_(callback)
 {
