@@ -29,15 +29,20 @@ public:
 	EventLoop();
 	~EventLoop();
 
+	// To be called outside of a loop
 	void start();
 	void stop();
+	void run();
 
+	// To be called inside or outside of a loop
 	void enqueue(const EventHandler& handler);
+
+	// To be called inside of a loop
+	void unloop();
 
 private:
 	void main_loop();
 	void handle_events();
-	void do_stop();
 
 	static void async_event_handler(struct ev_loop*, struct ev_async* async_event, int);
 	void on_async_event();
@@ -79,11 +84,32 @@ private:
 	void on_io(uint32_t revents);
 
 private:
-	struct ev_loop* loop_;
+	struct ev_loop* const loop_;
 	struct ev_io io_;
 	bool started_ = false;
 	const HandlerProc callback_;
 	uint32_t events_;
+};
+
+
+class SignalListener : NonCopyable
+{
+public:
+	SignalListener(EventLoop& event_loop, int signal, const EventHandler& callback);
+	~SignalListener();
+
+	void start();
+	void stop();
+
+private:
+	static void signal_handler(struct ev_loop*, struct ev_signal* signal, int);
+	void on_signal();
+
+private:
+	struct ev_loop* const loop_;
+	struct ev_signal signal_;
+	bool started_ = false;
+	const EventHandler callback_;
 };
 
 }

@@ -36,16 +36,20 @@ void EventLoop::stop()
 {
 	DH_VERIFY( thread_.get() != 0 );
 
-	enqueue( std::bind(&EventLoop::do_stop, this) );
+	enqueue( std::bind(&EventLoop::unloop, this) );
 
 	thread_->join();
 	thread_.reset();
 }
 
+void EventLoop::run()
+{
+	DH_VERIFY( thread_.get() == 0 );
+	main_loop();
+}
+
 void EventLoop::enqueue(const EventHandler& handler)
 {
-	DH_VERIFY( thread_.get() != 0 );
-
 	{
 		std::unique_lock<std::mutex> lock(guard_);
 		event_queue_.push_back( handler );
@@ -88,7 +92,7 @@ void EventLoop::handle_events()
 	}
 }
 
-void EventLoop::do_stop()
+void EventLoop::unloop()
 {
 	ev_unloop(loop_, EVUNLOOP_ONE);
 }
@@ -163,6 +167,48 @@ void IoListener::io_handler(struct ev_loop*, struct ev_io* io, int revents)
 void IoListener::on_io(uint32_t revents)
 {
 	callback_(io_.fd, revents);
+}
+
+
+SignalListener::SignalListener(EventLoop& event_loop, int signal, const EventHandler& callback) :
+    loop_( EventLoop::Connection::get_loop(event_loop) ),
+    callback_(callback)
+{
+	ev_signal_init(&signal_, signal_handler, signal);
+	signal_.data = this;
+}
+
+SignalListener::~SignalListener()
+{
+	DH_VERIFY( !started_ );
+}
+
+void SignalListener::start()
+{
+	if (started_)
+		return;
+	ev_signal_start(loop_, &signal_);
+	started_ = true;
+}
+
+void SignalListener::stop()
+{
+	if (!started_)
+		return;
+	ev_signal_stop(loop_, &signal_);
+	started_ = false;
+}
+
+void SignalListener::signal_handler(struct ev_loop*, struct ev_signal* signal, int)
+{
+	SignalListener* const self = static_cast<SignalListener*>(signal->data);
+	DH_VERIFY(self);
+	self->on_signal();
+}
+
+void SignalListener::on_signal()
+{
+	callback_();
 }
 
 }
