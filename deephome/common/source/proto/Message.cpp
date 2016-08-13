@@ -34,16 +34,16 @@ PacketType Packet::packet_type() const
 }
 
 /*static*/
-PacketPtr Packet::create_packet(const std::string& line)
+PacketPtr Packet::create(const std::string& line)
 {
 	PacketPtr result;
 
 	if (line.find("dev-q:") == 0)
-		result.reset( new DeviceInit() );
+		result = std::make_shared<DeviceInit>();
 	else if (line.find("cmd:") == 0)
-		result.reset( new ServiceCommand() );
+		result = std::make_shared<ServiceCommand>();
 	else
-		result.reset( new Message() );
+		result = std::make_shared<Message>();
 
 	result->assign_from_string(line);
 	return result;

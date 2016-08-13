@@ -3,8 +3,9 @@
 #include <string>
 #include <map>
 #include <vector>
-#include <memory>
 #include <cstdint>
+
+#include "proto/CommonTypes.h"
 
 
 namespace dh
@@ -19,9 +20,6 @@ enum PacketType
 	PacketType_ServiceCommand
 };
 
-class Packet;
-typedef std::unique_ptr<Packet> PacketPtr;
-
 class Packet
 {
 public:
@@ -30,7 +28,7 @@ public:
 	PacketType packet_type() const;
 	virtual ~Packet();
 
-	static PacketPtr create_packet(const std::string& line);
+	static PacketPtr create(const std::string& line);
 
 protected:
 	Packet();

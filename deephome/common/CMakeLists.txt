@@ -1,6 +1,8 @@
 
 set(common_SOURCES
+	"source/proto/Connection.cpp"
 	"source/proto/Message.cpp"
+	"source/proto/SocketConnection.cpp"
 	"source/util/Config.cpp"
 	"source/util/EventLoop.cpp"
 	"source/util/Log.cpp"

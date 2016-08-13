@@ -170,7 +170,7 @@ LogWriter::LogWriter(Logger::Level level, const std::string& file, int line, con
 	init_buffer(file, line, clsname, func, 0);
 }
 
-LogWriter::LogWriter(Logger::Level level, const std::string& file, int line, const std::string& clsname, const std::string& func, void* self) :
+LogWriter::LogWriter(Logger::Level level, const std::string& file, int line, const std::string& clsname, const std::string& func, const void* self) :
     level_(level)
 {
 	init_buffer(file, line, clsname, func, self);
@@ -189,7 +189,7 @@ LogWriter::~LogWriter()
 }
 
 
-void LogWriter::init_buffer(const std::string& file, int line, const std::string& clsname, const std::string& func, void* self)
+void LogWriter::init_buffer(const std::string& file, int line, const std::string& clsname, const std::string& func, const void* self)
 {
 	const size_t fsep = file.find_last_of('/');
 	const char* const filename = file.c_str() + (fsep == std::string::npos ? 0 : fsep + 1);

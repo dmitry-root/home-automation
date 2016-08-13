@@ -44,7 +44,7 @@ class LogWriter : NonCopyable
 public:
 	LogWriter(Logger::Level level, const std::string& file, int line, const std::string& func);
 	LogWriter(Logger::Level level, const std::string& file, int line, const std::string& clsname, const std::string& func);
-	LogWriter(Logger::Level level, const std::string& file, int line, const std::string& clsname, const std::string& func, void* self);
+	LogWriter(Logger::Level level, const std::string& file, int line, const std::string& clsname, const std::string& func, const void* self);
 	~LogWriter();
 
 	std::ostream& output_buffer();
@@ -57,7 +57,7 @@ public:
 	}
 
 private:
-	void init_buffer(const std::string& file, int line, const std::string& clsname, const std::string& func, void* self);
+	void init_buffer(const std::string& file, int line, const std::string& clsname, const std::string& func, const void* self);
 
 private:
 	const Logger::Level level_;
@@ -72,7 +72,7 @@ private:
 	dh::util::LogWriter( dh::util::Logger::Level_##level, __FILE__, __LINE__, DH_LOG_CLASS, __FUNCTION__, this)
 
 #define DH_SLOG(level) \
-	dh::util::LogWriter( dh::util::Logger::Level_#level, __FILE__, __LINE__, DH_LOG_CLASS, __FUNCTION__)
+	dh::util::LogWriter( dh::util::Logger::Level_##level, __FILE__, __LINE__, DH_LOG_CLASS, __FUNCTION__)
 
 #define DH_GLOG(level) \
 	dh::util::LogWriter( dh::util::Logger::Level_##level, __FILE__, __LINE__, __FUNCTION__)
