@@ -32,6 +32,7 @@ public:
 
 	static void add_target(Target target, const std::string& key);
 	static void write_line(Level level, const std::string& line);
+	static void set_level(Level level);
 
 private:
 	Logger();

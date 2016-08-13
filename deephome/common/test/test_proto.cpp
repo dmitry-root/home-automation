@@ -53,6 +53,65 @@ TEST(Proto, MessageSerializeFormat)
 }
 
 
+TEST(Proto, DeviceInitSerialize)
+{
+	using namespace dh::proto;
+
+	const DeviceInit dev_init(0x5c, 0xdd);
+	const std::string line = dev_init;
+
+	const DeviceInit result(line);
+	EXPECT_EQ( 0x5c, result.new_id() );
+	EXPECT_EQ( 0xdd, result.old_id() );
+}
+
+TEST(Proto, DeviceInitSerializeFormat)
+{
+	using namespace dh::proto;
+
+	const std::string line = "dev-q:3ee5";
+	const DeviceInit dev_init(line);
+
+	EXPECT_EQ( 0xe5, dev_init.new_id() );
+	EXPECT_EQ( 0x3e, dev_init.old_id() );
+}
+
+
+TEST(Proto, ServiceCommandSerialize)
+{
+	using namespace dh::proto;
+
+	ServiceCommand scmd("ping");
+	scmd.add_argument("string", "hello");
+	scmd.add_argument("int", 256u);
+
+	const std::string line = scmd.convert_to_string();
+
+	ServiceCommand result;
+	result.assign_from_string(line);
+
+	EXPECT_EQ( "ping", result.action() );
+	EXPECT_EQ( "hello", result.get_argument("string") );
+	EXPECT_EQ( 256u, result.get_argument("int", 0u) );
+	EXPECT_EQ( 111u, result.get_argument("what", 111u) );
+}
+
+TEST(Proto, ServiceCommandSerializeFormat)
+{
+	using namespace dh::proto;
+
+	const std::string line = "cmd:qwerty key:value empty: int:663d";
+
+	ServiceCommand scmd;
+	scmd.assign_from_string(line);
+
+	EXPECT_EQ( "qwerty", scmd.action() );
+	EXPECT_EQ( "value", scmd.get_argument("key") );
+	EXPECT_EQ( "", scmd.get_argument("empty") );
+	EXPECT_EQ( 0x663d, scmd.get_argument("int", 0u) );
+}
+
+
 int main(int argc, char** argv)
 {
 	testing::InitGoogleTest(&argc, argv);

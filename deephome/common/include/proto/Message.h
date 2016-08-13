@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <map>
 #include <vector>
 #include <memory>
 #include <cstdint>
@@ -14,7 +15,8 @@ namespace proto
 enum PacketType
 {
 	PacketType_Message,
-	PacketType_DeviceInit
+	PacketType_DeviceInit,
+	PacketType_ServiceCommand
 };
 
 class Packet;
@@ -122,6 +124,37 @@ private:
 	DeviceId new_id_ = 0xff;
 	DeviceId old_id_ = 0xff;
 };
+
+
+class ServiceCommand : public Packet
+{
+public:
+	explicit ServiceCommand(const std::string& action = std::string());
+	virtual ~ServiceCommand();
+
+	std::string action() const;
+	void set_action(const std::string& value);
+
+	void add_argument(const std::string& key, const std::string& value);
+	void add_argument(const std::string& key, unsigned int value);
+
+	std::string get_argument(const std::string& key, const std::string& default_value = std::string()) const;
+	unsigned int get_argument(const std::string& key, unsigned int default_value) const;
+
+private:
+	std::string serialize() const;
+	void deserialize(const std::string& data);
+
+	virtual std::string impl_convert_to_string() const;
+	virtual void impl_assign_from_string(const std::string& data);
+	virtual PacketType impl_packet_type() const;
+
+private:
+	typedef std::map<std::string, std::string> Arguments;
+	std::string action_;
+	Arguments arguments_;
+};
+
 
 }
 }

@@ -1,10 +1,12 @@
 #include "util/Log.h"
 #include <syslog.h>
 #include <time.h>
+#include <sys/time.h>
 #include <cstdint>
 #include <mutex>
 #include <fstream>
 #include <iostream>
+#include <iomanip>
 
 
 namespace dh
@@ -19,6 +21,7 @@ std::mutex guard_;
 uint32_t initial_targets_ = 0;
 std::string syslog_ident_;
 std::string file_name_;
+Logger::Level log_level_ = Logger::Level_Debug;
 
 class LoggerImpl : NonCopyable
 {
@@ -90,22 +93,30 @@ void LoggerImpl::write_line(Logger::Level level, const std::string& line)
 {
 	if (targets_ & (Logger::Target_Stderr | Logger::Target_File))
 	{
-		time_t curtime = 0;
-		::time(&curtime);
+		struct ::timeval tv;
+		::gettimeofday(&tv, 0);
 
 		struct ::tm localtm;
-		::localtime_r(&curtime, &localtm);
+		::localtime_r(&tv.tv_sec, &localtm);
+		const unsigned int msec = tv.tv_usec / 1000;
 
 		char timebuf[256];
-		::strftime(timebuf, sizeof(timebuf), "[%c] ", &localtm);
+		::strftime(timebuf, sizeof(timebuf), "%F %T", &localtm);
 
 		const char* const slevel = level_to_string(level);
 
+		std::ostringstream ss;
+		ss.fill('0');
+		ss << "[" << timebuf << "." << std::setw(3) << msec << std::setw(0) << "] (" << slevel << "): " << line << std::endl;
+
 		if (targets_ & Logger::Target_Stderr)
-			std::cerr << timebuf << "(" << slevel << "): " << line << std::endl;
+			std::cerr << ss.str();
 
 		if (targets_ & Logger::Target_File)
-			file_ << timebuf << "(" << slevel << "): " << line << std::endl;
+		{
+			file_ << ss.str();
+			file_.flush();
+		}
 	}
 
 	if (targets_ & Logger::Target_Syslog)
@@ -132,9 +143,18 @@ void Logger::write_line(Level level, const std::string& line)
 {
 	std::unique_lock<std::mutex> lock(guard_);
 
+	if (level < log_level_)
+		return;
+
 	static LoggerImpl logger;
 
 	logger.write_line(level, line);
+}
+
+void Logger::set_level(Level level)
+{
+	std::unique_lock<std::mutex> lock(guard_);
+	log_level_ = level;
 }
 
 
@@ -171,7 +191,10 @@ LogWriter::~LogWriter()
 
 void LogWriter::init_buffer(const std::string& file, int line, const std::string& clsname, const std::string& func, void* self)
 {
-	buffer_ << "\"" << file << "\"@" << line << " >> ";
+	const size_t fsep = file.find_last_of('/');
+	const char* const filename = file.c_str() + (fsep == std::string::npos ? 0 : fsep + 1);
+
+	buffer_ << filename << ":" << line << ", ";
 	if (!clsname.empty())
 		buffer_ << clsname << "::";
 	buffer_ << func;

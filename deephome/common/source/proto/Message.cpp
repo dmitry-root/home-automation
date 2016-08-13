@@ -38,8 +38,10 @@ PacketPtr Packet::create_packet(const std::string& line)
 {
 	PacketPtr result;
 
-	if (line.find("dev-q") != std::string::npos)
+	if (line.find("dev-q:") == 0)
 		result.reset( new DeviceInit() );
+	else if (line.find("cmd:") == 0)
+		result.reset( new ServiceCommand() );
 	else
 		result.reset( new Message() );
 
@@ -266,7 +268,7 @@ std::string DeviceInit::serialize() const
 	ss << "dev-q:";
 	ss.fill('0');
 	ss.width(2);
-	ss << static_cast<unsigned>(old_id_) << static_cast<unsigned>(new_id_);
+	ss << std::hex << static_cast<unsigned>(old_id_) << static_cast<unsigned>(new_id_);
 	return ss.str();
 }
 
@@ -304,6 +306,143 @@ void DeviceInit::impl_assign_from_string(const std::string& data)
 PacketType DeviceInit::impl_packet_type() const
 {
 	return PacketType_DeviceInit;
+}
+
+
+
+static bool check_string(const std::string& s)
+{
+	return s.find_first_not_of("0123456789_-abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") == std::string::npos;
+}
+
+ServiceCommand::ServiceCommand(const std::string& action) :
+    action_(action)
+{
+	DH_VERIFY( check_string(action_) );
+}
+
+ServiceCommand::~ServiceCommand()
+{
+}
+
+std::string ServiceCommand::action() const
+{
+	return action_;
+}
+
+void ServiceCommand::set_action(const std::string& value)
+{
+	DH_VERIFY( check_string(value) );
+	action_ = value;
+}
+
+void ServiceCommand::add_argument(const std::string& key, const std::string& value)
+{
+	DH_VERIFY( check_string(key) );
+	DH_VERIFY( key != "cmd" );
+	DH_VERIFY( check_string(value) );
+	arguments_[key] = value;
+}
+
+void ServiceCommand::add_argument(const std::string& key, unsigned int value)
+{
+	const int value_width = (value < 256) ? 2 : ((value < 256*256) ? 4 : 8);
+	std::ostringstream ss;
+	ss.width(value_width);
+	ss.fill('0');
+	ss << std::hex << value;
+	add_argument(key, ss.str());
+}
+
+std::string ServiceCommand::get_argument(const std::string& key, const std::string& default_value) const
+{
+	const Arguments::const_iterator it = arguments_.find(key);
+	return it == arguments_.cend() ? default_value : it->second;
+}
+
+unsigned int ServiceCommand::get_argument(const std::string& key, unsigned int default_value) const
+{
+	const std::string& string_result = get_argument(key);
+	if (string_result.empty())
+		return default_value;
+
+	unsigned int result = 0;
+	std::istringstream ss(string_result);
+	ss >> std::hex >> result;
+	return ss.bad() ? default_value : result;
+}
+
+std::string ServiceCommand::serialize() const
+{
+	DH_VERIFY( !action_.empty() );
+
+	std::ostringstream ss;
+	ss << "cmd:" << action_;
+
+	for (const Arguments::value_type& argument : arguments_)
+		ss << " " << argument.first << ":" << argument.second;
+
+	return ss.str();
+}
+
+void ServiceCommand::deserialize(const std::string& data)
+{
+	static const std::string cmd_line = "cmd:";
+	static const std::string space = " \t";
+
+	const size_t data_len = data.length();
+	const size_t cmd_len = cmd_line.length();
+
+	if (data_len < cmd_len || data.substr(0, cmd_len) != cmd_line)
+		throw std::invalid_argument("service command format error: cmd field expected");
+
+	size_t arg_end = data.find_first_of(space, cmd_len);
+	if (arg_end == std::string::npos)
+		arg_end = data_len;
+	const std::string new_action = data.substr(cmd_len, arg_end - cmd_len);
+	if (new_action.empty() || !check_string(new_action))
+		throw std::invalid_argument("service command format error: wrong cmd field");
+
+	Arguments new_arguments;
+	while (arg_end < data_len)
+	{
+		const size_t arg_begin = data.find_first_not_of(space, arg_end);
+		if (arg_begin == std::string::npos)
+			break; // space till end of line
+		arg_end = data.find_first_of(space, arg_begin);
+		if (arg_end == std::string::npos)
+			arg_end = data_len;
+
+		const size_t sep = data.find(':', arg_begin);
+		if (sep == std::string::npos || sep > arg_end)
+			throw std::invalid_argument("service command format error: argument syntax error");
+
+		const std::string key = data.substr(arg_begin, sep - arg_begin);
+		const std::string value = data.substr(sep + 1, arg_end - sep - 1);
+
+		if (key.empty() || !check_string(key) || !check_string(value))
+			throw std::invalid_argument("service command format error: wrong argument field");
+
+		new_arguments[key] = value;
+	}
+
+	action_ = new_action;
+	arguments_.swap(new_arguments);
+}
+
+std::string ServiceCommand::impl_convert_to_string() const
+{
+	return serialize();
+}
+
+void ServiceCommand::impl_assign_from_string(const std::string& data)
+{
+	deserialize(data);
+}
+
+PacketType ServiceCommand::impl_packet_type() const
+{
+	return PacketType_ServiceCommand;
 }
 
 }
