@@ -142,6 +142,14 @@ void SocketConnection::on_read_ready()
 	{
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return;
+
+		if (errno == EPIPE || errno == ETIMEDOUT)
+		{
+			DH_LOG(Warning) << "recv error, connection closed: " << ::strerror(errno);
+			packet_received( PacketPtr() );
+			return;
+		}
+
 		DH_LOG(Error) << "recv error: " << ::strerror(errno);
 		throw std::runtime_error( std::string("recv error: ") + ::strerror(errno) );
 	}
