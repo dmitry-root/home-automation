@@ -262,5 +262,54 @@ void SignalListener::on_signal()
 	}
 }
 
+
+Timeout::Timeout(const EventLoop& event_loop, uint32_t timeout_ms, const EventHandler& callback) :
+    event_loop_(event_loop),
+    loop_( EventLoop::Connection::get_loop(event_loop) ),
+    timeout_ms_(timeout_ms),
+    callback_(callback)
+{
+	DH_VERIFY(callback_);
+	ev_timer_init(&timer_, timeout_handler, timeout_ms / 1000., 0.);
+	timer_.data = this;
+}
+
+Timeout::~Timeout()
+{
+	DH_VERIFY( !started_ );
+}
+
+void Timeout::start()
+{
+	if (started_)
+		ev_timer_again(loop_, &timer_);
+
+	ev_timer_start(loop_, &timer_);
+	started_ = true;
+}
+
+void Timeout::stop()
+{
+	if (!started_)
+		return;
+	ev_timer_stop(loop_, &timer_);
+	started_ = false;
+}
+
+void Timeout::timeout_handler(struct ev_loop*, struct ev_timer* signal, int)
+{
+	Timeout* const self = static_cast<Timeout*>(signal->data);
+	DH_VERIFY(self);
+	self->on_timeout();
+}
+
+void Timeout::on_timeout()
+{
+	if (!started_)
+		return;
+	stop();
+	callback_();
+}
+
 }
 }

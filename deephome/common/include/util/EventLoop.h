@@ -175,5 +175,28 @@ private:
 	const EventHandler callback_;
 };
 
+
+class Timeout : NonCopyable
+{
+public:
+	Timeout(const EventLoop& event_loop, uint32_t timeout_ms, const EventHandler& callback);
+	~Timeout();
+
+	void start();
+	void stop();
+
+private:
+	static void timeout_handler(struct ev_loop*, struct ev_timer* signal, int);
+	void on_timeout();
+
+private:
+	const EventLoop& event_loop_;
+	struct ev_loop* const loop_;
+	struct ev_timer timer_;
+	bool started_ = false;
+	uint32_t timeout_ms_;
+	const EventHandler callback_;
+};
+
 }
 }
