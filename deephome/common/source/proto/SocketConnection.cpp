@@ -116,6 +116,9 @@ void SocketConnection::impl_unsubscribe()
 
 void SocketConnection::impl_send(const Packet& packet)
 {
+	if (got_error_)
+		return;
+
 	const std::string& packet_string = packet.convert_to_string();
 	DH_LOG(Info) << "send: " << packet_string;
 
@@ -133,6 +136,8 @@ void SocketConnection::impl_send(const Packet& packet)
 
 void SocketConnection::on_io_ready(uint32_t revents)
 {
+	if (got_error_)
+		return;
 	if (revents & util::IoListener::Event_Read)
 		on_read_ready();
 	if (revents & util::IoListener::Event_Write)
@@ -153,7 +158,7 @@ void SocketConnection::on_write_ready()
 			if (errno == EPIPE || errno == ETIMEDOUT)
 			{
 				DH_LOG(Warning) << "send error, connection closed: " << ::strerror(errno);
-				packet_received( PacketPtr() );
+				handle_error();
 				break;
 			}
 
@@ -188,7 +193,7 @@ void SocketConnection::on_read_ready()
 		if (errno == EPIPE || errno == ETIMEDOUT)
 		{
 			DH_LOG(Warning) << "recv error, connection closed: " << ::strerror(errno);
-			packet_received( PacketPtr() );
+			handle_error();
 			return;
 		}
 
@@ -241,6 +246,13 @@ void SocketConnection::handle_line(const std::string& line)
 	}
 
 	packet_received(packet);
+}
+
+void SocketConnection::handle_error()
+{
+	got_error_ = true;
+	socket_listener_.set_events(0);
+	packet_received( PacketPtr() );
 }
 
 }
