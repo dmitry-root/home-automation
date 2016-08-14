@@ -170,6 +170,11 @@ IoListener::~IoListener()
 	DH_VERIFY( !started_ );
 }
 
+void IoListener::set_events(uint32_t events)
+{
+	ev_io_set(&io_, io_.fd, (events & Event_Read ? EV_READ : 0) | (events & Event_Write ? EV_WRITE : 0));
+}
+
 void IoListener::start()
 {
 	if (started_)

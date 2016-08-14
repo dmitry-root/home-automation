@@ -19,6 +19,8 @@ namespace dh
 namespace proto
 {
 
+static const size_t write_buffer_limit = 1024*1024;
+
 #define DH_LOG_CLASS "SocketConnection"
 
 /*static*/ int SocketConnection::connect_tcp(const std::string& address, const std::string& service)
@@ -92,7 +94,7 @@ SocketConnection::SocketConnection(const util::EventLoop& loop, int socket) :
     socket_(socket),
     socket_listener_(
         loop, socket_,
-        std::bind(&SocketConnection::on_read_ready, this),
+        std::bind(&SocketConnection::on_io_ready, this, std::placeholders::_2),
         util::IoListener::Event_Read)
 {
 }
@@ -118,18 +120,58 @@ void SocketConnection::impl_send(const Packet& packet)
 	DH_LOG(Info) << "send: " << packet_string;
 
 	const std::string line = packet_string + "\r\n";
-	size_t pos = 0, len = line.length();
+
+	if (write_buffer_.size() + line.size() > write_buffer_limit)
+	{
+		DH_LOG(Warning) << "send error: write buffer limit exceeded";
+		throw std::range_error("write buffer limit exceeded");
+	}
+
+	write_buffer_ += line;
+	socket_listener_.set_events(util::IoListener::Event_All);
+}
+
+void SocketConnection::on_io_ready(uint32_t revents)
+{
+	if (revents & util::IoListener::Event_Read)
+		on_read_ready();
+	if (revents & util::IoListener::Event_Write)
+		on_write_ready();
+}
+
+void SocketConnection::on_write_ready()
+{
+	size_t pos = 0, len = write_buffer_.length();
 	while (pos < len)
 	{
-		// NOTE use blocking write here, as we expect there wouldn't be too huge amount of data.
-		const ssize_t sent = ::send(socket_, line.data() + pos, len - pos, 0);
+		const ssize_t sent = ::send(socket_, write_buffer_.data() + pos, len - pos, MSG_DONTWAIT);
 		if (sent < 0)
 		{
+			if (errno == EAGAIN || errno == EWOULDBLOCK)
+				break;
+
+			if (errno == EPIPE || errno == ETIMEDOUT)
+			{
+				DH_LOG(Warning) << "send error, connection closed: " << ::strerror(errno);
+				packet_received( PacketPtr() );
+				break;
+			}
+
 			DH_LOG(Error) << "send error: " << ::strerror(errno);
 			throw std::runtime_error( std::string("send error: ") + ::strerror(errno) );
 		}
 
 		pos += static_cast<size_t>(sent);
+	}
+
+	if (pos < len)
+	{
+		write_buffer_.replace(0, pos, std::string());
+	}
+	else
+	{
+		write_buffer_.clear();
+		socket_listener_.set_events(util::IoListener::Event_Read);
 	}
 }
 
@@ -156,27 +198,27 @@ void SocketConnection::on_read_ready()
 	else if (received == 0)
 		return;
 
-	buffer_.append(buffer.data(), received);
+	read_buffer_.append(buffer.data(), received);
 	std::vector<char>().swap(buffer);
 
 	size_t start = 0, end = 0;
 	while (true)
 	{
-		end = buffer_.find_first_of("\r\n", start);
+		end = read_buffer_.find_first_of("\r\n", start);
 		if (end == std::string::npos)
 		{
-			buffer_.replace(0, start, std::string());
+			read_buffer_.replace(0, start, std::string());
 			break;
 		}
 
-		const std::string line = buffer_.substr(start, end - start);
+		const std::string line = read_buffer_.substr(start, end - start);
 		if (line.find_first_not_of(" \t") != std::string::npos)
 			handle_line( line );
 
-		start = buffer_.find_first_not_of("\r\n", end);
+		start = read_buffer_.find_first_not_of("\r\n", end);
 		if (start == std::string::npos)
 		{
-			buffer_.clear();
+			read_buffer_.clear();
 			break;
 		}
 	}

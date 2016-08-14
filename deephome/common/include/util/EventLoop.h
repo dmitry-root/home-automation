@@ -135,6 +135,8 @@ public:
 	IoListener(const EventLoop& event_loop, int fd, const HandlerProc& callback, uint32_t events = Event_All);
 	~IoListener();
 
+	void set_events(uint32_t events);
+
 	void start();
 	void stop();
 
