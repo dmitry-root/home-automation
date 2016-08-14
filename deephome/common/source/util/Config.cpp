@@ -66,8 +66,8 @@ void Config::read_file(const std::string& file_name)
 	std::ifstream in(file_name);
 	if (!in)
 	{
-		DH_LOG(Warning) << "Configuration file not found: " << file_name << ". Running with empty configuration.";
-		return;
+		DH_LOG(Warning) << "Configuration file not found: " << file_name;
+		throw std::runtime_error("Configuration file not found: " + file_name);
 	}
 
 	int lineno = 0;

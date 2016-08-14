@@ -1,5 +1,6 @@
 
 set(router_SOURCES
+	"Application.cpp"
 	"Config.cpp"
 	"Router.cpp"
 	"main.cpp"
