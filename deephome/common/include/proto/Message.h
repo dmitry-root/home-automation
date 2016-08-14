@@ -135,9 +135,11 @@ public:
 
 	void add_argument(const std::string& key, const std::string& value);
 	void add_argument(const std::string& key, unsigned int value);
+	void add_raw_argument(const std::string& key, const std::vector<uint8_t>& value);
 
 	std::string get_argument(const std::string& key, const std::string& default_value = std::string()) const;
 	unsigned int get_argument(const std::string& key, unsigned int default_value) const;
+	bool get_raw_argument(const std::string& key, std::vector<uint8_t>& result) const;
 
 private:
 	std::string serialize() const;

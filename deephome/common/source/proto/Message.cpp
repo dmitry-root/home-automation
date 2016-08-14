@@ -354,6 +354,17 @@ void ServiceCommand::add_argument(const std::string& key, unsigned int value)
 	add_argument(key, ss.str());
 }
 
+void ServiceCommand::add_raw_argument(const std::string& key, const std::vector<uint8_t>& value)
+{
+	std::ostringstream ss;
+	ss.width(2);
+	ss.fill('0');
+	ss << std::hex;
+	for (uint8_t byte : value)
+		ss << (unsigned)byte;
+	add_argument(key, ss.str());
+}
+
 std::string ServiceCommand::get_argument(const std::string& key, const std::string& default_value) const
 {
 	const Arguments::const_iterator it = arguments_.find(key);
@@ -370,6 +381,27 @@ unsigned int ServiceCommand::get_argument(const std::string& key, unsigned int d
 	std::istringstream ss(string_result);
 	ss >> std::hex >> result;
 	return ss.bad() ? default_value : result;
+}
+
+bool ServiceCommand::get_raw_argument(const std::string& key, std::vector<uint8_t>& result) const
+{
+	const std::string& string_result = get_argument(key);
+	if (string_result.empty() || string_result.length() % 2 != 0 ||
+	    string_result.find_first_not_of("0123456789abcdefABCDEF") != std::string::npos)
+	{
+		return false;
+	}
+
+	Message::Body data(string_result.size() / 2);
+	for (size_t i = 0, n = string_result.size() / 2; i < n; ++i)
+	{
+		unsigned byte = 0;
+		std::istringstream(string_result.substr(i*2, 2)) >> std::hex >> byte;
+		data[i] = byte;
+	}
+
+	result.swap(data);
+	return true;
 }
 
 std::string ServiceCommand::serialize() const
