@@ -1,5 +1,6 @@
 #include <sstream>
 #include <stdexcept>
+#include <iomanip>
 
 #include "util/Assert.h"
 #include "proto/Message.h"
@@ -127,20 +128,15 @@ std::string Message::serialize() const
 
 	ss.fill('0');
 	ss << "dev:";
-	ss.width(2);
-	ss << std::hex << static_cast<unsigned>(device_id_) << "  ";
+	ss << std::hex << std::setw(2) << static_cast<unsigned>(device_id_) << "  ";
 
-	ss.width(4);
-	ss << "addr:" << address_;
-	ss.width(0);
+	ss << "addr:" << std::setw(4) << address_ << "  ";
 
-	ss << "  ";
 	if (type_ == Type_Data)
 	{
 		ss << ":";
-		ss.width(2);
 		for (size_t i = 0, n = body_.size(); i < n; ++i)
-			ss << static_cast<unsigned>(body_[i]);
+			ss << std::setw(2) << static_cast<unsigned>(body_[i]);
 	}
 	else
 	{
@@ -265,10 +261,8 @@ void DeviceInit::set_old_id(DeviceId value)
 std::string DeviceInit::serialize() const
 {
 	std::ostringstream ss;
-	ss << "dev-q:";
 	ss.fill('0');
-	ss.width(2);
-	ss << std::hex << static_cast<unsigned>(old_id_) << static_cast<unsigned>(new_id_);
+	ss << "dev-q:" << std::setw(2) << std::hex << static_cast<unsigned>(old_id_) << static_cast<unsigned>(new_id_);
 	return ss.str();
 }
 
@@ -348,20 +342,18 @@ void ServiceCommand::add_argument(const std::string& key, unsigned int value)
 {
 	const int value_width = (value < 256) ? 2 : ((value < 256*256) ? 4 : 8);
 	std::ostringstream ss;
-	ss.width(value_width);
 	ss.fill('0');
-	ss << std::hex << value;
+	ss << std::hex << std::setw(value_width) << value;
 	add_argument(key, ss.str());
 }
 
 void ServiceCommand::add_raw_argument(const std::string& key, const std::vector<uint8_t>& value)
 {
 	std::ostringstream ss;
-	ss.width(2);
 	ss.fill('0');
 	ss << std::hex;
 	for (uint8_t byte : value)
-		ss << (unsigned)byte;
+		ss << std::setw(2) << (unsigned)byte;
 	add_argument(key, ss.str());
 }
 

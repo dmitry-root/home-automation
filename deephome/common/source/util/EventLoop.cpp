@@ -172,7 +172,13 @@ IoListener::~IoListener()
 
 void IoListener::set_events(uint32_t events)
 {
+	if (started_)
+		ev_io_stop(loop_, &io_);
+
 	ev_io_set(&io_, io_.fd, (events & Event_Read ? EV_READ : 0) | (events & Event_Write ? EV_WRITE : 0));
+
+	if (started_)
+		ev_io_start(loop_, &io_);
 }
 
 void IoListener::start()
@@ -270,8 +276,6 @@ Timeout::Timeout(const EventLoop& event_loop, uint32_t timeout_ms, const EventHa
     callback_(callback)
 {
 	DH_VERIFY(callback_);
-	ev_timer_init(&timer_, timeout_handler, timeout_ms / 1000., 0.);
-	timer_.data = this;
 }
 
 Timeout::~Timeout()
@@ -282,7 +286,10 @@ Timeout::~Timeout()
 void Timeout::start()
 {
 	if (started_)
-		ev_timer_again(loop_, &timer_);
+		stop();
+
+	ev_timer_init(&timer_, timeout_handler, timeout_ms_ / 1000., 0.);
+	timer_.data = this;
 
 	ev_timer_start(loop_, &timer_);
 	started_ = true;

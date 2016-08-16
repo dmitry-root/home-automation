@@ -92,10 +92,14 @@ static const size_t write_buffer_limit = 1024*1024;
 SocketConnection::SocketConnection(const util::EventLoop& loop, int socket) :
     Connection(loop),
     socket_(socket),
-    socket_listener_(
+    read_listener_(
         loop, socket_,
-        std::bind(&SocketConnection::on_io_ready, this, std::placeholders::_2),
-        util::IoListener::Event_Read)
+        std::bind(&SocketConnection::on_read_ready, this),
+        util::IoListener::Event_Read),
+    write_listener_(
+        loop, socket_,
+        std::bind(&SocketConnection::on_write_ready, this),
+        util::IoListener::Event_Write)
 {
 }
 
@@ -106,12 +110,14 @@ SocketConnection::~SocketConnection()
 
 void SocketConnection::impl_subscribe()
 {
-	socket_listener_.start();
+	read_listener_.start();
 }
 
 void SocketConnection::impl_unsubscribe()
 {
-	socket_listener_.stop();
+	read_listener_.stop();
+	write_listener_.stop();
+	write_buffer_.clear();
 }
 
 void SocketConnection::impl_send(const Packet& packet)
@@ -131,17 +137,7 @@ void SocketConnection::impl_send(const Packet& packet)
 	}
 
 	write_buffer_ += line;
-	socket_listener_.set_events(util::IoListener::Event_All);
-}
-
-void SocketConnection::on_io_ready(uint32_t revents)
-{
-	if (got_error_)
-		return;
-	if (revents & util::IoListener::Event_Read)
-		on_read_ready();
-	if (revents & util::IoListener::Event_Write)
-		on_write_ready();
+	write_listener_.start();
 }
 
 void SocketConnection::on_write_ready()
@@ -155,7 +151,7 @@ void SocketConnection::on_write_ready()
 			if (errno == EAGAIN || errno == EWOULDBLOCK)
 				break;
 
-			if (errno == EPIPE || errno == ETIMEDOUT)
+			if (errno == EPIPE || errno == ETIMEDOUT || errno == ECONNRESET)
 			{
 				DH_LOG(Warning) << "send error, connection closed: " << ::strerror(errno);
 				handle_error();
@@ -176,7 +172,7 @@ void SocketConnection::on_write_ready()
 	else
 	{
 		write_buffer_.clear();
-		socket_listener_.set_events(util::IoListener::Event_Read);
+		write_listener_.stop();
 	}
 }
 
@@ -190,7 +186,7 @@ void SocketConnection::on_read_ready()
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return;
 
-		if (errno == EPIPE || errno == ETIMEDOUT)
+		if (errno == EPIPE || errno == ETIMEDOUT || errno == ECONNRESET)
 		{
 			DH_LOG(Warning) << "recv error, connection closed: " << ::strerror(errno);
 			handle_error();
@@ -251,7 +247,8 @@ void SocketConnection::handle_line(const std::string& line)
 void SocketConnection::handle_error()
 {
 	got_error_ = true;
-	socket_listener_.set_events(0);
+	read_listener_.stop();
+	write_listener_.stop();
 	packet_received( PacketPtr() );
 }
 

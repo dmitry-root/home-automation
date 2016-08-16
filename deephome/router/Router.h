@@ -100,6 +100,7 @@ private:
 	void on_connection_packet_received(proto::PacketPtr packet, uint32_t connection_id);
 
 	void remove_filters(uint32_t connection_id);
+	void remove_reply_filters(const std::string& network_name);
 	bool handle_command(const proto::ServiceCommand& command, uint32_t connection_id);
 
 	bool handle_filter(const proto::ServiceCommand& command, uint32_t connection_id);

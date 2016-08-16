@@ -17,4 +17,5 @@ include_directories("${PROJECT_SOURCE_DIR}/common/include")
 add_subdirectory(gtest)
 add_subdirectory(common)
 add_subdirectory(router)
+add_subdirectory(test)
 

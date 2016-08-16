@@ -25,7 +25,6 @@ private:
 	void impl_unsubscribe();
 	void impl_send(const Packet& packet);
 
-	void on_io_ready(uint32_t revents);
 	void on_read_ready();
 	void on_write_ready();
 	void handle_line(const std::string& line);
@@ -33,7 +32,7 @@ private:
 
 private:
 	const int socket_;
-	util::IoListener socket_listener_;
+	util::IoListener read_listener_, write_listener_;
 	std::string read_buffer_;
 	std::string write_buffer_;
 	bool got_error_ = false;

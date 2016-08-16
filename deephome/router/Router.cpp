@@ -88,16 +88,19 @@ void Router::connect_networks()
 		if (network.connection)
 			continue;
 
-		DH_LOG(Info) << "connecting device network " << network.network->name << ": " << network.network->address << ":" << network.network->service;
-		const int socket = proto::SocketConnection::connect_tcp(network.network->address, network.network->service);
-		if (socket == -1)
+		try
 		{
-			DH_LOG(Warning) << "network " << network.network->name << " connection failed, to be retried later";
+			DH_LOG(Info) << "connecting device network " << network.network->name << ": " << network.network->address << ":" << network.network->service;
+			const int socket = proto::SocketConnection::connect_tcp(network.network->address, network.network->service);
+
+			DH_LOG(Info) << "device network " << network.network->name << " successfully connected.";
+			network.connection = std::make_shared<proto::SocketConnection>(scoped_loop_.event_loop(), socket);
+		}
+		catch (const std::runtime_error& e)
+		{
+			DH_LOG(Warning) << "network " << network.network->name << " connection failed (" << e.what() << "), to be retried later";
 			continue;
 		}
-
-		DH_LOG(Info) << "device network " << network.network->name << " successfully connected.";
-		network.connection = std::make_shared<proto::SocketConnection>(scoped_loop_.event_loop(), socket);
 
 		using namespace std::placeholders;
 		network.connection->subscribe( std::bind(&Router::on_device_packet_received, this, _1, i) );
@@ -147,6 +150,7 @@ void Router::on_device_packet_received(proto::PacketPtr packet, size_t network_i
 		network.connection.reset();
 		--connected_networks_;
 		update_reconnect_timer();
+		remove_reply_filters(network.network->name);
 		return;
 	}
 
@@ -261,14 +265,17 @@ void Router::start_bindings()
 	for (BindingRecord& binding : bindings_)
 	{
 		int socket = -1;
-		if (binding.binding->type == Config::Binding::Type_TCP)
-			socket = proto::SocketServer::listen_tcp(binding.binding->address, binding.binding->service, binding.binding->backlog);
-		else
-			socket = proto::SocketServer::listen_unix(binding.binding->address, binding.binding->backlog);
 
-		if (socket == -1)
+		try
 		{
-			DH_LOG(FatalError) << "could not bind address: " << binding.binding->address << ", service: " << binding.binding->service;
+			if (binding.binding->type == Config::Binding::Type_TCP)
+				socket = proto::SocketServer::listen_tcp(binding.binding->address, binding.binding->service, binding.binding->backlog);
+			else
+				socket = proto::SocketServer::listen_unix(binding.binding->address, binding.binding->backlog);
+		}
+		catch (const std::runtime_error& e)
+		{
+			DH_LOG(FatalError) << "could not bind address: " << binding.binding->address << ", service: " << binding.binding->service << " - " << e.what();
 			throw std::runtime_error("binding to address failed");
 		}
 
@@ -379,6 +386,13 @@ void Router::remove_filters(uint32_t connection_id)
 {
 	auto it = std::remove_if(filters_.begin(), filters_.end(),
 	                         [connection_id](const FilterRecord& r) { return r.connection_id == connection_id; });
+	filters_.erase(it, filters_.end());
+}
+
+void Router::remove_reply_filters(const std::string& network_name)
+{
+	auto it = std::remove_if(filters_.begin(), filters_.end(),
+	                         [&network_name](const FilterRecord& r) { return (r.flags_ & FilterRecord::Flag_Reply) != 0 && r.device->network_name == network_name; });
 	filters_.erase(it, filters_.end());
 }
 

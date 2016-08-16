@@ -44,8 +44,14 @@ namespace proto
 		fd = ::socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 		if (fd == -1)
 			continue;
-		if (::bind(fd, rp->ai_addr, rp->ai_addrlen) != -1)
+
+		const int enable = 1;
+		if (::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) != -1 &&
+		    ::bind(fd, rp->ai_addr, rp->ai_addrlen) != -1)
+		{
 			break;
+		}
+
 		::close(fd);
 		fd = -1;
 	}

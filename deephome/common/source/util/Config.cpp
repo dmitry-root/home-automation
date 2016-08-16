@@ -33,7 +33,7 @@ std::string trim(const std::string& line)
 	const size_t last = line.find_last_not_of(space);
 	DH_ASSERT( last != std::string::npos );
 
-	return line.substr(first, last - first);
+	return line.substr(first, last - first + 1);
 }
 
 void strip_space(std::string& line)
@@ -56,7 +56,7 @@ Config::Config(const std::string& name)
 
 void Config::read(const std::string& name)
 {
-	read_file( Runtime::config_file_path(name + ".conf"));
+	read_file( Runtime::config_file_path(name + ".conf") );
 }
 
 void Config::read_file(const std::string& file_name)
@@ -84,10 +84,9 @@ void Config::read_file(const std::string& file_name)
 
 		if (line[0] == '[')
 		{
-			const size_t end = line.find_last_of(']');
-			if (end != line.length() - 1)
+			if (line[line.length() - 1] != ']')
 			{
-				DH_LOG(FatalError) << "Syntax error at line " << lineno << ": wrong section syntax";
+				DH_LOG(FatalError) << "Syntax error at line " << lineno << ": wrong section syntax, line (after strip): " << line;
 				throw std::runtime_error("Syntax error in configuration file (wrong section syntax)");
 			}
 

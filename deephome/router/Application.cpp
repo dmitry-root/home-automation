@@ -66,6 +66,7 @@ bool Application::start()
 	sig_hup_.start();
 	sig_term_.start();
 	sig_int_.start();
+	::signal(SIGPIPE, SIG_IGN);
 
 	return true;
 }
