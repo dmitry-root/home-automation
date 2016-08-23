@@ -91,7 +91,7 @@ void Dispatcher::send_query(const DeviceCommand& query, const DeviceCommandHandl
 	send(query);
 
 	QueryRecord query_record(query, handler, ++last_query_id_);
-	if (timeout_ms != -1)
+	if (timeout_ms != infinite_timeout)
 	{
 		query_record.timeout = std::make_shared<util::Timeout>(
 		            scoped_loop_.event_loop(),

@@ -8,6 +8,8 @@
 #include "util/EventLoop.h"
 #include "proto/CommonTypes.h"
 #include "client/Command.h"
+#include "client/Result.h"
+#include "client/Serializer.h"
 
 
 namespace dh
@@ -43,7 +45,15 @@ public:
 	void add_filter(const Filter& filter, const DeviceCommandHandler& handler);
 
 	void send(const DeviceCommand& command);
-	void send_query(const DeviceCommand& query, const DeviceCommandHandler& handler, uint32_t timeout_ms = -1);
+	void send_query(const DeviceCommand& query, const DeviceCommandHandler& handler, uint32_t timeout_ms = infinite_timeout);
+
+	template <typename T>
+	void send_query(const DeviceCommand& query, Result<T>& result, uint32_t timeout_ms = infinite_timeout)
+	{
+		const DeviceCommandHandler handler =
+		        [&result](const DeviceCommand* command) { T value = T(); if (command && command->get_value<T>(value)) result.set(&value); else result.set(nullptr); };
+		send_query(query, handler, timeout_ms);
+	}
 
 private:
 	struct FilterRecord
