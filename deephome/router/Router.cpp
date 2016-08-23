@@ -16,6 +16,7 @@ namespace router
 {
 
 static const uint32_t reconnect_timeout_ms = 30000;
+static const uint32_t send_period_ms = 50; // TODO configurable?
 
 #define DH_LOG_CLASS "Router"
 
@@ -23,6 +24,7 @@ static const uint32_t reconnect_timeout_ms = 30000;
 Router::Router(const util::EventLoop& event_loop, const Config& config) :
     scoped_loop_(event_loop),
     config_(config),
+    send_timer_(event_loop, send_period_ms, std::bind(&Router::on_send_timer, this)),
     reconnect_timeout_(event_loop, reconnect_timeout_ms, std::bind(&Router::on_reconnect_timeout, this))
 {
 	init_bindings();
@@ -56,6 +58,7 @@ void Router::stop()
 	disconnect_networks();
 	stop_bindings();
 	close_connections();
+	send_timer_.stop();
 
 	scoped_loop_.invalidate();
 	started_ = false;
@@ -146,15 +149,20 @@ void Router::on_device_packet_received(proto::PacketPtr packet, size_t network_i
 	if (!packet)
 	{
 		DH_LOG(Warning) << "device network " << network.network->name << " disconnected, to be reconnected";
-		network.connection->unsubscribe();
-		network.connection.reset();
-		--connected_networks_;
-		update_reconnect_timer();
-		remove_reply_filters(network.network->name);
+		disconnect_network(network);
 		return;
 	}
 
 	handle_device_packet(*packet, network_index);
+}
+
+void Router::disconnect_network(NetworkRecord& network)
+{
+	network.connection->unsubscribe();
+	network.connection.reset();
+	--connected_networks_;
+	update_reconnect_timer();
+	remove_reply_filters(network.network->name);
 }
 
 void Router::handle_device_packet(const proto::Packet& packet, size_t network_index)
@@ -473,8 +481,6 @@ bool Router::handle_send(const proto::ServiceCommand& command, uint32_t connecti
 		return false;
 	}
 
-	proto::Connection& connection = *network_it->connection;
-
 	const uint32_t address = command.get_argument("address", std::numeric_limits<uint32_t>::max());
 	if (address > 0xffff)
 	{
@@ -498,28 +504,57 @@ bool Router::handle_send(const proto::ServiceCommand& command, uint32_t connecti
 		message.set_body(data);
 	}
 
-	try
-	{
-		connection.send(message);
-	}
-	catch (const std::range_error& e)
-	{
-		DH_LOG(Error) << "write buffer exceeded, network: " << device->network_name;
-		return false;
-	}
+	SendRecord send_record(type, *network_it, message);
 
 	if (type == SendType_Request)
 	{
-		// Create filter for handling response
 		FilterRecord filter(connection_id);
 		filter.device = device;
 		filter.address = address;
 		filter.address_mask = 0xffff;
 		filter.flags_ = FilterRecord::Flag_Reply;
-		filters_.push_back(filter);
+		send_record.response_filter = filter;
 	}
 
+	if (send_queue_.empty())
+		send_timer_.start();
+
+	send_queue_.push_back(send_record);
 	return true;
+}
+
+void Router::on_send_timer()
+{
+	if (!started_ || send_queue_.empty())
+		return;
+
+	SendRecord send_record = send_queue_.front();
+	send_queue_.pop_front();
+
+	NetworkRecord& network = send_record.network;
+
+	bool sent = false;
+	try
+	{
+		if (network.connection)
+		{
+			network.connection->send(send_record.message);
+			sent = true;
+		}
+		else
+			DH_LOG(Warning) << "network is down while actually sending packet, network: " << network.network->name;
+	}
+	catch (const std::range_error& e)
+	{
+		DH_LOG(Error) << "write buffer exceeded, network: " << network.network->name << ". Network is to be reconnected.";
+		disconnect_network(network);
+	}
+
+	if (send_record.type == SendType_Request && sent)
+		filters_.push_back(send_record.response_filter);
+
+	if (!send_queue_.empty())
+		send_timer_.start();
 }
 
 }

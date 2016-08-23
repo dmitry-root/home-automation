@@ -3,6 +3,8 @@
 #include <vector>
 
 #include "proto/CommonTypes.h"
+#include "client/CommonTypes.h"
+#include "client/Serializer.h"
 
 
 namespace dh
@@ -21,8 +23,6 @@ public:
 		Type_Query,
 		Type_Reply
 	};
-
-	typedef std::vector<uint8_t> Body;
 
 	DeviceCommand();
 	explicit DeviceCommand(const proto::ServiceCommand& service_command);
@@ -43,6 +43,22 @@ public:
 
 	void get_body(Body& body) const;
 	void set_body(const Body& body);
+
+	template <typename T>
+	void set_value(const T& value)
+	{
+		Body body;
+		Serializer<T>::serialize(value, body);
+		set_body(body);
+	}
+
+	template <typename T>
+	bool get_value(T& value) const
+	{
+		Body body;
+		get_body(body);
+		return Serializer<T>::deserialize(body, value);
+	}
 
 private:
 	std::string device_;

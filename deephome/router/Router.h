@@ -7,6 +7,7 @@
 #include "util/NonCopyable.h"
 #include "util/EventLoop.h"
 #include "proto/CommonTypes.h"
+#include "proto/Message.h"
 #include "proto/SocketServer.h"
 
 #include "Config.h"
@@ -74,6 +75,18 @@ private:
 		SendType_Data
 	};
 
+	struct SendRecord
+	{
+		SendRecord(SendType type, NetworkRecord& network, const proto::Message& message) :
+		    type(type), network(network), message(message) {}
+
+		SendType type;
+		NetworkRecord& network;
+		proto::Message message;
+		FilterRecord response_filter;
+	};
+	typedef std::list<SendRecord> SendQueue;
+
 private:
 	void init_networks();
 
@@ -86,6 +99,7 @@ private:
 
 	void on_reconnect_timeout();
 	void on_device_packet_received(proto::PacketPtr packet, size_t network_index);
+	void disconnect_network(NetworkRecord& network);
 
 
 	void init_bindings();
@@ -105,11 +119,13 @@ private:
 
 	bool handle_filter(const proto::ServiceCommand& command, uint32_t connection_id);
 	bool handle_send(const proto::ServiceCommand& command, uint32_t connection_id, SendType type);
+	void on_send_timer();
 
 private:
 	util::ScopedEventLoop scoped_loop_;
 	const Config& config_;
 	bool started_ = false;
+	util::Timeout send_timer_;
 
 	NetworkList networks_;
 	size_t connected_networks_ = 0;
@@ -121,6 +137,7 @@ private:
 	uint32_t next_connection_id_ = 0;
 
 	FilterList filters_;
+	SendQueue send_queue_;
 };
 
 }
