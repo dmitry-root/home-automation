@@ -113,7 +113,7 @@ void Dispatcher::start_internal(int socket)
 	connection_->subscribe( std::bind(&Dispatcher::on_packet, this, std::placeholders::_1) );
 }
 
-void Dispatcher::close_query(const QueryList::iterator it, const DeviceCommand* response)
+void Dispatcher::close_query(const QueryList::iterator it, OptionalDeviceCommand response)
 {
 	if (it->timeout)
 	{
@@ -169,7 +169,7 @@ void Dispatcher::on_query_timeout(uint32_t unique_id)
 
 	DH_LOG(Warning) << "timeout waiting for reply from device: " << it->query.device();
 
-	close_query(it, nullptr);
+	close_query(it, OptionalDeviceCommand());
 }
 
 void Dispatcher::handle_device_command(const DeviceCommand& device_command)
@@ -186,11 +186,11 @@ void Dispatcher::handle_device_command(const DeviceCommand& device_command)
 		{
 			DH_LOG(Warning) << "could not find query that corresponds to received reply, device: " << device_command.device();
 			if (unknown_handler_)
-				unknown_handler_(&device_command);
+				unknown_handler_( device_command );
 			return;
 		}
 
-		close_query(it, &device_command);
+		close_query(it, device_command);
 	}
 	else
 	{
@@ -203,7 +203,7 @@ void Dispatcher::handle_device_command(const DeviceCommand& device_command)
 		{
 			DH_LOG(Warning) << "status command did not match any specified filters, device: " << device_command.device();
 			if (unknown_handler_)
-				unknown_handler_(&device_command);
+				unknown_handler_( device_command );
 			return;
 		}
 
@@ -212,7 +212,7 @@ void Dispatcher::handle_device_command(const DeviceCommand& device_command)
 		if (it->filter.options() & Filter::Option_OneTime)
 			filters_.erase(it);
 
-		handler(&device_command);
+		handler( device_command );
 	}
 }
 

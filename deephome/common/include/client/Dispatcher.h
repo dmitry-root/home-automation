@@ -18,7 +18,7 @@ namespace client
 {
 
 // NOTE nullptr argument means that reply timeout occured.
-typedef std::function< void(const DeviceCommand*) > DeviceCommandHandler;
+typedef std::function< void(OptionalDeviceCommand) > DeviceCommandHandler;
 
 
 class Dispatcher : util::NonCopyable
@@ -50,8 +50,10 @@ public:
 	template <typename T>
 	void send_query(const DeviceCommand& query, Result<T>& result, uint32_t timeout_ms = infinite_timeout)
 	{
+		typedef typename Result<T>::ValueType ValueType;
+
 		const DeviceCommandHandler handler =
-		        [&result](const DeviceCommand* command) { T value = T(); if (command && command->get_value<T>(value)) result.set(&value); else result.set(nullptr); };
+		        [&result](OptionalDeviceCommand command) { T value = T(); if (command && command->get_value<T>(value)) result.set(value); else result.set( ValueType() ); };
 		send_query(query, handler, timeout_ms);
 	}
 
@@ -81,7 +83,7 @@ private:
 
 private:
 	void start_internal(int socket);
-	void close_query(const QueryList::iterator it, const DeviceCommand* response);
+	void close_query(const QueryList::iterator it, OptionalDeviceCommand response);
 	void on_packet(proto::PacketPtr packet);
 	void on_query_timeout(uint32_t unique_id);
 

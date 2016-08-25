@@ -20,7 +20,9 @@ template <typename T>
 class Result : util::NonCopyable
 {
 public:
-	virtual void set(const T* value) = 0;
+	typedef std::experimental::optional<T> ValueType;
+
+	virtual void set(ValueType value) = 0;
 
 protected:
 	Result() = default;
@@ -31,45 +33,45 @@ template <typename T>
 class BlockingResult : public Result<T>
 {
 public:
-	BlockingResult(T& result) : result_(result) {}
+	using typename Result<T>::ValueType;
+
+	BlockingResult() = default;
 	~BlockingResult() = default;
 
-	bool wait()
+	ValueType wait()
 	{
 		std::unique_lock<std::mutex> lock(guard_);
 		while (!notified_)
 			signal_.wait(lock);
-		return succeeded_;
+		return result_;
 	}
 
 private:
-	virtual void set(const T* value)
+	virtual void set(ValueType value)
 	{
 		{
 			std::unique_lock<std::mutex> lock(guard_);
 			notified_ = true;
-			succeeded_ = (value != nullptr);
-			if (succeeded_)
-				result_ = *value;
+			result_ = value;
 		}
 
 		signal_.notify_all();
 	}
 
 private:
-	T& result_;
+	ValueType result_;
 
 	std::mutex guard_;
 	std::condition_variable signal_;
 	bool notified_ = false;
-	bool succeeded_ = false;
 };
 
 template <typename T>
 class CallbackResult : public Result<T>
 {
 public:
-	typedef std::function< void(const T*) > Handler;
+	using typename Result<T>::ValueType;
+	typedef std::function< void(ValueType) > Handler;
 
 	CallbackResult(const Handler& handler) :
 	    handler_(handler)
@@ -80,7 +82,7 @@ public:
 	~CallbackResult() = default;
 
 private:
-	virtual void set(const T* value)
+	virtual void set(ValueType value)
 	{
 		handler_(value);
 	}
