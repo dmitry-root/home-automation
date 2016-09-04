@@ -55,6 +55,15 @@ public:
 		dispatcher().send(command);
 	}
 
+	template <typename T>
+	void subscribe(uint16_t address, const std::function<void(T)>& handler, uint32_t filter_options = 0)
+	{
+		const DeviceCommandHandler proxy =
+		        [handler](OptionalDeviceCommand command) { T value = T(); if (command && command->get_value<T>(value)) handler(value); };
+		const Filter filter(name(), address, 0xffff, filter_options);
+		dispatcher().add_filter(filter, proxy);
+	}
+
 private:
 	Dispatcher& dispatcher_;
 	const std::string name_;
@@ -80,7 +89,7 @@ inline T get(Dev& dev)
 
 	MyResult result;
 	(dev.*QueryProc)(result);
-	MyValue value = result.wait();
+	const MyValue value = result.wait();
 
 	if (!value)
 		throw Timeout();

@@ -1,5 +1,6 @@
 
 set(common_SOURCES
+	"source/client/CanNode.cpp"
 	"source/client/Command.cpp"
 	"source/client/Device.cpp"
 	"source/client/Dispatcher.cpp"
