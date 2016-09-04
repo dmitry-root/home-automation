@@ -1,6 +1,7 @@
 
 set(common_SOURCES
 	"source/client/Command.cpp"
+	"source/client/Device.cpp"
 	"source/client/Dispatcher.cpp"
 	"source/proto/Connection.cpp"
 	"source/proto/Message.cpp"

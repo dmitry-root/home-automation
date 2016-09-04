@@ -109,6 +109,22 @@ public:
 };
 
 
+template<>
+class Serializer<Body>
+{
+public:
+	static void serialize(const Body& value, Body& result)
+	{
+		result = value;
+	}
+
+	static bool deserialize(const Body& data, Body& result)
+	{
+		result = data;
+		return true;
+	}
+};
+
 
 }
 }
