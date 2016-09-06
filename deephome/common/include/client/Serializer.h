@@ -5,6 +5,7 @@
 
 #include "util/Assert.h"
 #include "client/CommonTypes.h"
+#include "ha/can_node.h"
 
 
 namespace dh
@@ -121,6 +122,53 @@ public:
 	static bool deserialize(const Body& data, Body& result)
 	{
 		result = data;
+		return true;
+	}
+};
+
+
+template<>
+class Serializer<HA_CAN_Node_AnalogRange>
+{
+public:
+	typedef HA_CAN_Node_AnalogRange Range;
+	static void serialize(const Range& value, Body& result)
+	{
+		result.resize(4);
+		result[0] = value.range_min >> 8;
+		result[1] = value.range_min & 0xff;
+		result[2] = value.range_max >> 8;
+		result[3] = value.range_max & 0xff;
+	}
+
+	static bool deserialize(const Body& data, Range& result)
+	{
+		if (data.size() != 4)
+			return false;
+		result.range_min = (static_cast<uint16_t>(data[0]) << 8) | data[1];
+		result.range_max = (static_cast<uint16_t>(data[2]) << 8) | data[3];
+		return true;
+	}
+};
+
+
+template<>
+class Serializer<Temperature>
+{
+public:
+	static bool deserialize(const Body& data, Temperature& result)
+	{
+		if (data.size() != 2)
+			return false;
+
+		const uint16_t value = data[0] | (static_cast<uint16_t>(data[1]) << 8);
+		if (value == 0xffff)
+			result = Temperature();
+		else if (value & 0x8000) // negative value
+			result = static_cast<double>( ~value + 1 ) / 16.;
+		else // positive value
+			result = static_cast<double>(value) / 16.;
+
 		return true;
 	}
 };

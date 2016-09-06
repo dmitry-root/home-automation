@@ -57,7 +57,7 @@ typedef std::shared_ptr<ChannelBase> ChannelPtr;
 class SwitchChannel;
 class ButtonChannel;
 class AnalogChannel;
-class PwmChannel;
+//class PwmChannel;
 class Ds18b20Channel;
 
 
@@ -76,7 +76,7 @@ public:
 	SwitchChannel& get_switch(uint8_t channel_id);
 	ButtonChannel& get_button(uint8_t channel_id);
 	AnalogChannel& get_analog(uint8_t channel_id);
-	PwmChannel&    get_pwm(uint8_t channel_id);
+	//PwmChannel&    get_pwm(uint8_t channel_id);
 	Ds18b20Channel& get_ds18b20(uint8_t channel_id);
 
 private:
@@ -117,8 +117,6 @@ public:
 	SwitchChannel(CanNode& owner, uint8_t id);
 	virtual ~SwitchChannel();
 
-	typedef std::function<void(uint8_t)> ValueHandler;
-
 	enum Config
 	{
 		Config_Polarity = HA_CAN_Node_SwitchConfig_Polarity,
@@ -134,8 +132,6 @@ public:
 
 	void query_off_delay(Result<uint16_t>& result);
 	void assign_off_delay(uint16_t value);
-
-	void subscribe(const ValueHandler& handler, uint32_t filter_options = 0);
 };
 
 
@@ -155,6 +151,117 @@ inline uint8_t get_switch_value(SwitchChannel& channel)
 inline uint16_t get_switch_off_delay(SwitchChannel& channel)
 {
 	return get<uint16_t, SwitchChannel, &SwitchChannel::query_off_delay>(channel);
+}
+
+}
+
+
+class ButtonChannel : public ChannelBase
+{
+public:
+	ButtonChannel(CanNode& owner, uint8_t id);
+	virtual ~ButtonChannel();
+
+	typedef std::function<void(uint8_t)> ValueHandler;
+
+	enum Config
+	{
+		Config_Polarity = HA_CAN_Node_ButtonConfig_Polarity,
+		Config_PullUp = HA_CAN_Node_ButtonConfig_PullUp,
+		Config_Lock = HA_CAN_Node_ButtonConfig_Lock,
+		Config_Active = HA_CAN_Node_ButtonConfig_Active
+	};
+
+	void query_config(Result<uint8_t>& result);
+	void assign_config(uint8_t config);
+
+	void query_value(Result<uint8_t>& result);
+	void assign_value(uint8_t value);
+
+	void subscribe(const ValueHandler& handler, uint32_t filter_options = 0);
+};
+
+
+namespace sync
+{
+
+inline uint8_t get_button_config(ButtonChannel& channel)
+{
+	return get<uint8_t, ButtonChannel, &ButtonChannel::query_config>(channel);
+}
+
+inline uint8_t get_button_value(ButtonChannel& channel)
+{
+	return get<uint8_t, ButtonChannel, &ButtonChannel::query_value>(channel);
+}
+
+}
+
+
+class AnalogChannel : public ChannelBase
+{
+public:
+	AnalogChannel(CanNode& owner, uint8_t id);
+	virtual ~AnalogChannel();
+
+	typedef std::function<void(uint16_t)> ValueHandler;
+
+	typedef HA_CAN_Node_AnalogRange Range;
+
+	enum Config
+	{
+		RangeCheck = HA_CAN_Node_AnalogConfig_RangeCheck,
+		ReverseRange = HA_CAN_Node_AnalogConfig_ReverseRange
+	};
+
+	void query_config(Result<uint8_t>& result);
+	void assign_config(uint8_t config);
+
+	void query_range(Result<Range>& result);
+	void assign_range(const Range& range);
+
+	void query_value(Result<uint16_t>& value);
+
+	void subscribe(const ValueHandler& handler, uint32_t filter_options = 0);
+};
+
+
+namespace sync
+{
+
+inline uint8_t get_analog_config(AnalogChannel& channel)
+{
+	return get<uint8_t, AnalogChannel, &AnalogChannel::query_config>(channel);
+}
+
+inline AnalogChannel::Range get_analog_range(AnalogChannel& channel)
+{
+	return get<AnalogChannel::Range, AnalogChannel, &AnalogChannel::query_range>(channel);
+}
+
+inline uint16_t get_analog_value(AnalogChannel& channel)
+{
+	return get<uint16_t, AnalogChannel, &AnalogChannel::query_value>(channel);
+}
+
+}
+
+
+class Ds18b20Channel : public ChannelBase
+{
+public:
+	Ds18b20Channel(CanNode& owner, uint8_t id);
+	virtual ~Ds18b20Channel();
+
+	void query_value(Result<Temperature>& result);
+};
+
+namespace sync
+{
+
+inline Temperature get_ds18b20_temperature(Ds18b20Channel& channel)
+{
+	return get<Temperature, Ds18b20Channel, &Ds18b20Channel::query_value>(channel);
 }
 
 }
