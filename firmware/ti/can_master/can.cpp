@@ -59,7 +59,7 @@ CanMaster::CanMaster() :
 	GPIOPinTypeCAN(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_CAN0);
 	CANInit(CAN0_BASE);
-	CANBitRateSet(CAN0_BASE, get_system_clock_freqency(), 125000);
+	CANBitRateSet(CAN0_BASE, get_system_clock_freqency(), 50000);
 	CANRetrySet(CAN0_BASE, true);
 	CANEnable(CAN0_BASE);
 

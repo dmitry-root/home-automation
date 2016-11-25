@@ -26,7 +26,7 @@ CAN_InitStatus_TypeDef CAN_Node_CAN_init(void)
 		CAN_SynJumpWidth_1TimeQuantum,
 		CAN_BitSeg1_8TimeQuantum,
 		CAN_BitSeg2_7TimeQuantum,
-		4);   /* prescaler = 4: baud rate = 8 MHz / 4 / 16 = 125 kbps */
+		10);   /* prescaler = 10: baud rate = 8 MHz / 10 / 16 = 50 kbps */
 
 	if (status != CAN_InitStatus_Success)
 		return status;

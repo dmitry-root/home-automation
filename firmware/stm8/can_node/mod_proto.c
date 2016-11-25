@@ -24,12 +24,12 @@ uint8_t proto_request(uint8_t channel_id, uint8_t address, uint8_t* reply)
 
 	if (address == HA_CAN_Node_ChannelCount)
 	{
-		*reply = CAN_Node_ChannelCount;
+		reply[0] = CAN_Node_ChannelCount;
 		return 1;
 	}
 	else if (address >= HA_CAN_Node_ChannelFunction0 && address < HA_CAN_Node_ChannelFunction0 + CAN_Node_ChannelCount)
 	{
-		*reply = CAN_Node_get_channel(address - HA_CAN_Node_ChannelFunction0);
+		reply[0] = CAN_Node_get_channel(address - HA_CAN_Node_ChannelFunction0);
 		return 1;
 	}
 
