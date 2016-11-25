@@ -1,4 +1,5 @@
 #include <iostream>
+#include <unistd.h>
 
 #include "util/Assert.h"
 #include "util/Config.h"
@@ -34,6 +35,16 @@ int Application::run()
 	{
 		print_usage();
 		return valid_arguments_ ? 0 : 1;
+	}
+
+	if (daemonize_)
+	{
+		const int rc = ::daemon(0, 0);
+		if (rc == -1)
+		{
+			std::cerr << "daemon failed: " << ::strerror(errno) << "\n";
+			return 2;
+		}
 	}
 
 	init_log();
