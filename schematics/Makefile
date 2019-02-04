@@ -18,6 +18,7 @@ export EAGLE_CMD ?= eagle
 all: $(OUTROOT)
 	@$(MAKE) -C sensor all
 	@$(MAKE) -C ti_can all
+	@$(MAKE) -C pi_cal all
 
 zip: $(ZIPROOT)
 	/usr/bin/perl $(BUILDROOT)/pack_gerbers.pl gerber zip
