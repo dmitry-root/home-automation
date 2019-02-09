@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import config
-import flow
-import temp
+from . import config
+from . import flow
+from . import temp
 import threading
 import time
 import logging
