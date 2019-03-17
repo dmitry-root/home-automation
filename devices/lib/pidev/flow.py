@@ -1,26 +1,36 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import pigpio
+import RPi.GPIO as GPIO
+import threading
 
 class FlowSensor:
 
-    def __init__(self, pi, pin):
-        self._pi = pi
+    def __init__(self, pin):
         self._pin = pin
-        pi.set_mode(pin, pigpio.INPUT)
-
+        GPIO.setup(pin, GPIO.IN)
+        self._lock = threading.Lock()
         self._prev_tally = 0
-        self._cb = pi.callback(pin, pigpio.RISING_EDGE)
+        self._tally_counter = 0
+        GPIO.add_event_detect(pin, GPIO.RISING)
+        GPIO.add_event_callback(pin, self._callback)
 
     def close(self):
-        self._cb.clear()
+        GPIO.remove_event_detect(self._pin)
 
     def reset(self):
-        self._prev_tally = self._cb.tally()
+        self._prev_tally = self._tally()
+
+    def _callback(self, pin):
+        with self._lock:
+            self._tally_counter += 1
+
+    def _tally(self):
+        with self._lock:
+            return self._tally_counter
 
     def _count_passed(self):
-        tally = self._cb.tally()
+        tally = self._tally()
         count = tally - self._prev_tally
         self._prev_tally = tally
         return count

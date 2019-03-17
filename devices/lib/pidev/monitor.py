@@ -8,7 +8,6 @@ import threading
 import time
 import logging
 import statistics
-import pigpio
 
 class SensorsMonitor:
 
@@ -22,14 +21,14 @@ class SensorsMonitor:
             self.temp_lo = temp_lo
             self.flow = flow
 
-    def __init__(self, pi, config):
+    def __init__(self, config):
         self._temp = {}
         self._flow = {}
         self._calorimeter = {}
         self._temp_results = {}
         if (not config["sensors"]) or (not isinstance(config["sensors"], list)):
             return
-        self._fill(pi, config["sensors"])
+        self._fill(config["sensors"])
 
         self._lock = threading.Lock()
         self._running = False
@@ -97,7 +96,7 @@ class SensorsMonitor:
 
         return result
 
-    def _fill(self, pi, sensors):
+    def _fill(self, sensors):
         index = 1
         for item in sensors:
             if not isinstance(item, dict):
@@ -110,7 +109,7 @@ class SensorsMonitor:
             if type == 'temp':
                 self._fill_temp(name, item)
             elif type == 'flow':
-                self._fill_flow(name, pi, item)
+                self._fill_flow(name, item)
             elif type == 'calorimeter':
                 self._fill_calorimeter(name, item)
 
@@ -126,7 +125,7 @@ class SensorsMonitor:
         self._temp[name] = temp.TempSensor(device_id)
         self._temp_results[name] = []
 
-    def _fill_flow(self, name, pi, item):
+    def _fill_flow(self, name, item):
         pin = None
         try:
             pin = int(item['pin'])
@@ -137,7 +136,7 @@ class SensorsMonitor:
             logging.warning("duplicate name for flow sensor: '%s', ignored" % name)
             return
         logging.info("adding flow sensor name: '%s', pin: %d" % (name, pin))
-        self._flow[name] = flow.FlowSensor(pi, pin)
+        self._flow[name] = flow.FlowSensor(pin)
 
     def _fill_calorimeter(self, name, item):
         temp_hi = item['temp_hi']

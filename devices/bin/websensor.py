@@ -6,7 +6,6 @@ import sys
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 import logging
 import json
-import pigpio
 import threading
 import time
 
@@ -26,7 +25,7 @@ class PeriodicMonitor:
         self._load()
         self._save_file(self.temp_file)
         self._timer = PeriodicTimer(self.interval, self._update)
-        self._monitor = SensorsMonitor(pigpio.pi(), config)
+        self._monitor = SensorsMonitor(config)
         self._lock = threading.Lock()
 
     def start(self):
