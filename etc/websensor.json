@@ -1,0 +1,15 @@
+{
+	"sensors" :
+	[
+		{ "type" : "flow", "name" : "f1", "pin" : 17 },
+		{ "type" : "flow", "name" : "f2", "pin" : 27 },
+		{ "type" : "flow", "name" : "f3", "pin" : 22 }
+	],
+	"websensor" :
+	{
+		"port" : 8000,
+		"interval" : 30,
+		"temporary_directory" : "/tmp/websensor",
+		"persistent_directory" : "/var/lib/websensor"
+	}
+}

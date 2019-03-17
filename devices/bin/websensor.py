@@ -3,7 +3,7 @@
 
 import os
 import sys
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 import logging
 import json
 import pigpio
@@ -44,6 +44,7 @@ class PeriodicMonitor:
     def _load(self):
         if not self._load_file(self.temp_file):
             self._load_file(self.pers_file)
+        self._data = {}
         self._data['temp'] = {}
         self._data['flow'] = {}
         self._data.setdefault('consumption', {})
@@ -80,8 +81,8 @@ class PeriodicMonitor:
         self._time = now
 
         data = self._monitor.collect(seconds_passed)
-        self.data['temp'] = data.temp
-        self.data['flow'] = data.flow
+        self._data['temp'] = data.temp
+        self._data['flow'] = data.flow
         for key, value in data.consumption.items():
             self._data['consumption'].setdefault(key, 0.0)
             self._data['consumption'][key] += value
